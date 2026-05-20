@@ -51,8 +51,18 @@ async def list_models(provider_id: int):
         if not provider_cfg:
             raise HTTPException(status_code=404, detail="Provider not found")
 
-    provider = get_provider(provider_cfg.provider_type, provider_cfg.base_url, provider_cfg.api_key)
+    provider = get_provider(provider_cfg.provider_type, provider_cfg.base_url, provider_cfg.api_key, provider_cfg.config)
     models = await provider.list_models()
+
+    if provider_cfg.provider_type != "custom":
+        try:
+            cfg = json.loads(provider_cfg.config)
+            aliases = cfg.get("model_aliases", {})
+            if aliases:
+                models = [m for m in models if m in aliases]
+        except json.JSONDecodeError:
+            pass
+
     return {"models": models}
 
 @router.get("/providers/schema/{provider_type}")

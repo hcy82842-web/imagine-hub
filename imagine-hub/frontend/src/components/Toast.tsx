@@ -33,19 +33,18 @@ export default function ToastContainer() {
 
   if (items.length === 0) return null;
 
+  const colors: Record<string, string> = {
+    error: "bg-red-800/90 border-red-600/50 text-red-200",
+    success: "bg-green-800/90 border-green-500/50 text-green-200",
+    info: "bg-blue-800/90 border-blue-500/50 text-blue-200",
+  };
+
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
       {items.map((item) => (
         <div
           key={item.id}
-          className="animate-toast-in pointer-events-auto px-4 py-3 rounded-xl shadow-2xl text-sm max-w-sm backdrop-blur-md border"
-          style={
-            item.type === "error"
-              ? { background: "rgba(127,29,29,0.9)", borderColor: "rgba(220,38,38,0.5)", color: "#fecaca" }
-              : item.type === "success"
-                ? { background: "rgba(22,101,52,0.9)", borderColor: "rgba(34,197,94,0.5)", color: "#bbf7d0" }
-                : { background: "rgba(30,64,175,0.9)", borderColor: "rgba(59,130,246,0.5)", color: "#bfdbfe" }
-          }
+          className={`animate-toast-in pointer-events-auto px-4 py-3 rounded-xl shadow-2xl text-sm max-w-sm backdrop-blur-md border ${colors[item.type]}`}
         >
           {item.message}
         </div>

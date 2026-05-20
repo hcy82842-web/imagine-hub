@@ -44,3 +44,20 @@ class HistoryItem(BaseModel):
     params: str
     image_base64: str
     created_at: str
+
+class TestConnectionRequest(BaseModel):
+    provider_type: str
+    base_url: str
+    api_key: str = ""
+    config: str = "{}"
+
+class TestStep(BaseModel):
+    name: str
+    ok: bool | None
+    detail: str
+    ms: int
+
+class TestConnectionResponse(BaseModel):
+    success: bool
+    steps: list[TestStep]
+    total_ms: int

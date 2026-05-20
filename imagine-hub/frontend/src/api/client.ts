@@ -95,4 +95,38 @@ export async function deleteHistory(id: number): Promise<void> {
   await api.delete(`/history/${id}`);
 }
 
+export interface TestStep {
+  name: string;
+  ok: boolean | null;
+  detail: string;
+  ms: number;
+}
+
+export interface TestResult {
+  success: boolean;
+  steps: TestStep[];
+  total_ms: number;
+}
+
+export async function testConnection(data: {
+  provider_type: string;
+  base_url: string;
+  api_key?: string;
+  config?: string;
+}): Promise<TestResult> {
+  const res = await api.post("/providers/test-connection", data);
+  return res.data;
+}
+
+export interface NetworkInfo {
+  lan_ip: string;
+  lan_url: string;
+  host: string;
+}
+
+export async function getNetworkInfo(): Promise<NetworkInfo> {
+  const res = await api.get("/network-info");
+  return res.data;
+}
+
 export default api;

@@ -6,11 +6,13 @@ import ParamPanel from "./components/ParamPanel";
 import ChatInput from "./components/ChatInput";
 import ImageDisplay from "./components/ImageDisplay";
 import ToastContainer, { showToast } from "./components/Toast";
-import { listProviders, generateImage, ProviderData } from "./api/client";
+import { listProviders, generateImage, getNetworkInfo, ProviderData } from "./api/client";
+import { useLang } from "./contexts/LanguageContext";
 
 type Page = "home" | "history" | "settings";
 
 function App() {
+  const { t } = useLang();
   const [page, setPage] = useState<Page>("home");
   const [providers, setProviders] = useState<ProviderData[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<ProviderData | null>(null);
@@ -20,6 +22,11 @@ function App() {
   const [mediaType, setMediaType] = useState("image/png");
   const [loading, setLoading] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
+  const [lanUrl, setLanUrl] = useState("");
+
+  useEffect(() => {
+    getNetworkInfo().then((info) => setLanUrl(info.lan_url)).catch(() => {});
+  }, []);
 
   const loadProviders = async () => {
     try {
@@ -64,30 +71,45 @@ function App() {
     }
   };
 
-  const navItems: { key: Page; label: string }[] = [
-    { key: "home", label: "Home" },
-    { key: "history", label: "History" },
-    { key: "settings", label: "Settings" },
+  const navItems: { key: Page; labelKey: string }[] = [
+    { key: "home", labelKey: "nav.home" },
+    { key: "history", labelKey: "nav.history" },
+    { key: "settings", labelKey: "nav.settings" },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
-      <nav className="glass sticky top-0 z-40 border-b border-gray-800/50 px-6 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold tracking-tight">
-          <span className="text-blue-400">Imagine</span> Hub
-        </h1>
-        <div className="flex gap-1">
-          {navItems.map(({ key, label }) => (
+    <div className="min-h-screen flex flex-col">
+      <nav className="glass sticky top-0 z-40 border-b dark:border-gray-800/50 border-amber-200/50 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-lg font-bold tracking-tight">
+            <span className="text-blue-500">Imagine</span>{" "}
+            <span className="dark:text-gray-100 text-gray-800">Hub</span>
+          </h1>
+          {lanUrl && (
+            <button
+              onClick={() => navigator.clipboard.writeText(lanUrl)}
+              title="Click to copy LAN address"
+              className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] dark:bg-gray-800 bg-amber-100 dark:text-gray-400 text-gray-500 border dark:border-gray-700 border-amber-200 hover:dark:text-gray-200 hover:text-gray-700 transition-colors font-mono"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              {lanUrl.replace("http://", "")}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-1 items-center">
+          {navItems.map(({ key, labelKey }) => (
             <button
               key={key}
               onClick={() => setPage(key)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 page === key
-                  ? "bg-blue-600/20 text-blue-300"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+                  ? "bg-blue-600/20 text-blue-500"
+                  : "dark:text-gray-400 text-gray-500 dark:hover:text-gray-200 hover:text-gray-700 dark:hover:bg-gray-800/50 hover:bg-amber-200/50"
               }`}
             >
-              {label}
+              {t(labelKey)}
             </button>
           ))}
         </div>
@@ -98,13 +120,12 @@ function App() {
           {providers.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <h2 className="text-2xl font-bold mb-2">Welcome to Imagine Hub</h2>
-                <p className="text-gray-400">
-                  Go to{" "}
-                  <button onClick={() => setPage("settings")} className="text-blue-400 underline hover:text-blue-300 transition-colors">
-                    Settings
-                  </button>{" "}
-                  to add your first provider.
+                <h2 className="text-2xl font-bold mb-2">{t("app.welcome")}</h2>
+                <p className="dark:text-gray-400 text-gray-500">
+                  {t("app.welcome_hint")}{" "}
+                  <button onClick={() => setPage("settings")} className="text-blue-500 underline hover:text-blue-400 transition-colors">
+                    {t("nav.settings")}
+                  </button>
                 </p>
               </div>
             </div>
@@ -134,7 +155,7 @@ function App() {
 
       {page === "history" && (
         <div className="flex-1 max-w-3xl mx-auto w-full p-6 animate-slide-up">
-          <h2 className="text-2xl font-bold mb-6">Generation History</h2>
+          <h2 className="text-2xl font-bold mb-6 dark:text-gray-100 text-gray-800">{t("history.title")}</h2>
           <HistoryList key={historyKey} />
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import api from "../api/client";
+import { useLang } from "../contexts/LanguageContext";
 
 interface SchemaField {
   key: string;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export default function ParamPanel({ providerType, params, onChange }: Props) {
+  const { t } = useLang();
   const [schema, setSchema] = useState<SchemaField[]>([]);
   const [open, setOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -46,10 +48,10 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
   if (schema.length === 0) return null;
 
   return (
-    <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-4">
+    <div className="dark:bg-gray-900/50 bg-white/80 rounded-xl border dark:border-gray-800 border-amber-200 p-4">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors w-full"
+        className="flex items-center gap-2 text-sm dark:text-gray-400 text-gray-500 hover:dark:text-gray-200 hover:text-gray-700 transition-colors w-full"
       >
         <svg
           className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
@@ -59,7 +61,7 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        Parameters
+        {t("param.parameters")}
       </button>
 
       <div
@@ -73,10 +75,10 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
         <div className="mt-4 grid grid-cols-2 gap-4">
           {schema.map((field) => (
             <div key={field.key}>
-              <label className="block text-xs text-gray-400 mb-1">{field.label}</label>
+              <label className="block text-xs dark:text-gray-400 text-gray-500 mb-1">{field.label}</label>
               {field.type === "select" && field.options ? (
                 <select
-                  className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 border border-gray-700 focus:border-blue-500 outline-none transition-colors"
+                  className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors"
                   value={String(params[field.key] ?? field.default)}
                   onChange={(e) => update(field.key, e.target.value)}
                 >
@@ -87,7 +89,7 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
               ) : field.type === "number" ? (
                 <input
                   type="number"
-                  className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 border border-gray-700 focus:border-blue-500 outline-none transition-colors"
+                  className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors"
                   value={Number(params[field.key] ?? field.default)}
                   min={field.min}
                   max={field.max}
@@ -96,7 +98,7 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
                 />
               ) : (
                 <input
-                  className="w-full bg-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 border border-gray-700 focus:border-blue-500 outline-none transition-colors"
+                  className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors"
                   value={String(params[field.key] ?? field.default)}
                   onChange={(e) => update(field.key, e.target.value)}
                   placeholder={field.label}

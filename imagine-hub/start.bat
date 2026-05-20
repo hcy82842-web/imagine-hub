@@ -3,6 +3,11 @@ title Imagine Hub Launcher
 echo === Starting Imagine Hub ===
 echo.
 
+:: Detect LAN IP
+for /f "tokens=3 delims=: " %%a in ('ipconfig ^| findstr /i "IPv4" ^| findstr /i "192.168."') do set "lanip=%%a"
+if "%lanip%"=="" for /f "tokens=3 delims=: " %%a in ('ipconfig ^| findstr /i "IPv4" ^| findstr /i "10."') do set "lanip=%%a"
+if "%lanip%"=="" set "lanip=localhost"
+
 :: Start backend in new window
 echo [Backend] Starting...
 start "Imagine Hub - Backend" cmd /k "cd /d "%~dp0backend" && .venv\Scripts\python run.py"
@@ -24,6 +29,7 @@ start http://localhost:5173
 echo.
 echo Backend:  http://localhost:8000/api/health
 echo Frontend: http://localhost:5173
+echo LAN:      http://%lanip%:5173
 echo.
 echo Close the terminal windows to stop servers.
 echo.
