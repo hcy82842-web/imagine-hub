@@ -443,6 +443,56 @@ export default function Settings({ onProvidersChange }: Props) {
         <div className="dark:bg-red-900/50 bg-red-100 border dark:border-red-700 border-red-300 rounded-lg p-3 mb-6 text-sm dark:text-red-200 text-red-700">{error}</div>
       )}
 
+      <div className="dark:bg-gray-900/60 bg-amber-100/50 rounded-lg p-6 mb-6 border dark:border-gray-800 border-amber-200">
+        <h3 className="text-lg font-semibold mb-4 dark:text-gray-100 text-gray-800">{t("preferences.title")}</h3>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
+          <div className="flex items-center gap-3">
+            <label className="text-sm dark:text-gray-400 text-gray-500 min-w-16">{t("preferences.language")}</label>
+            <select value={lang} onChange={(e) => setLang(e.target.value as "zh" | "en")}
+              className="dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors">
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm dark:text-gray-400 text-gray-500 min-w-16">{t("preferences.theme")}</label>
+            <div className="flex gap-1 dark:bg-gray-800 bg-amber-50 rounded-lg p-1 border dark:border-gray-700 border-amber-200">
+              {(["dark", "light", "system"] as const).map((tval) => (
+                <button key={tval} onClick={() => setTheme(tval)}
+                  className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${theme === tval ? "bg-blue-600 text-white shadow-sm" : "dark:text-gray-400 text-gray-500 hover:dark:text-gray-200 hover:text-gray-700"}`}>
+                  {tval === "dark" ? t("preferences.dark") : tval === "light" ? t("preferences.light") : t("preferences.system")}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 space-y-4 border-t dark:border-gray-800 border-amber-200 pt-5">
+          <div>
+            <label className="text-sm dark:text-gray-400 text-gray-500 mb-1.5 flex items-center gap-1">
+              {t("preferences.default_prompt")}
+              <HelpTip fieldKey="default_prompt" />
+            </label>
+            <textarea
+              className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors font-mono"
+              rows={3}
+              value={defaultPrompt}
+              onChange={(e) => { setDefaultPrompt(e.target.value); localStorage.setItem("imagine_default_prompt", e.target.value); }}
+              placeholder={t("preferences.default_prompt_placeholder")}
+            />
+            <p className="text-[10px] dark:text-gray-500 text-gray-400 mt-1">{t("preferences.default_prompt_hint")}</p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="rounded dark:bg-gray-800 bg-amber-50 border dark:border-gray-700 border-amber-200"
+              checked={showPrefixInHistory}
+              onChange={(e) => { setShowPrefixInHistory(e.target.checked); localStorage.setItem("imagine_show_prefix_in_history", String(e.target.checked)); }}
+            />
+            <span className="text-sm dark:text-gray-300 text-gray-600">{t("preferences.show_prefix_in_history")}</span>
+          </label>
+        </div>
+      </div>
+
       <div className="dark:bg-gray-900/60 bg-amber-100/50 rounded-lg p-5 mb-6 border dark:border-gray-800 border-amber-200">
         <button onClick={() => setCurlOpen(!curlOpen)} className="flex items-center gap-2 w-full text-left">
           <svg className={`w-3 h-3 dark:text-gray-300 text-gray-600 transition-transform duration-200 ${curlOpen ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -777,55 +827,6 @@ export default function Settings({ onProvidersChange }: Props) {
         ))}
       </div>
 
-      <div className="dark:bg-gray-900/60 bg-amber-100/50 rounded-lg p-6 border dark:border-gray-800 border-amber-200">
-        <h3 className="text-lg font-semibold mb-4 dark:text-gray-100 text-gray-800">{t("preferences.title")}</h3>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
-          <div className="flex items-center gap-3">
-            <label className="text-sm dark:text-gray-400 text-gray-500 min-w-16">{t("preferences.language")}</label>
-            <select value={lang} onChange={(e) => setLang(e.target.value as "zh" | "en")}
-              className="dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors">
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm dark:text-gray-400 text-gray-500 min-w-16">{t("preferences.theme")}</label>
-            <div className="flex gap-1 dark:bg-gray-800 bg-amber-50 rounded-lg p-1 border dark:border-gray-700 border-amber-200">
-              {(["dark", "light", "system"] as const).map((tval) => (
-                <button key={tval} onClick={() => setTheme(tval)}
-                  className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${theme === tval ? "bg-blue-600 text-white shadow-sm" : "dark:text-gray-400 text-gray-500 hover:dark:text-gray-200 hover:text-gray-700"}`}>
-                  {tval === "dark" ? t("preferences.dark") : tval === "light" ? t("preferences.light") : t("preferences.system")}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="mt-5 space-y-4 border-t dark:border-gray-800 border-amber-200 pt-5">
-          <div>
-            <label className="text-sm dark:text-gray-400 text-gray-500 mb-1.5 flex items-center gap-1">
-              {t("preferences.default_prompt")}
-              <HelpTip fieldKey="default_prompt" />
-            </label>
-            <textarea
-              className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors font-mono"
-              rows={3}
-              value={defaultPrompt}
-              onChange={(e) => { setDefaultPrompt(e.target.value); localStorage.setItem("imagine_default_prompt", e.target.value); }}
-              placeholder={t("preferences.default_prompt_placeholder")}
-            />
-            <p className="text-[10px] dark:text-gray-500 text-gray-400 mt-1">{t("preferences.default_prompt_hint")}</p>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              className="rounded dark:bg-gray-800 bg-amber-50 border dark:border-gray-700 border-amber-200"
-              checked={showPrefixInHistory}
-              onChange={(e) => { setShowPrefixInHistory(e.target.checked); localStorage.setItem("imagine_show_prefix_in_history", String(e.target.checked)); }}
-            />
-            <span className="text-sm dark:text-gray-300 text-gray-600">{t("preferences.show_prefix_in_history")}</span>
-          </label>
-        </div>
-      </div>
     </div>
   );
 }

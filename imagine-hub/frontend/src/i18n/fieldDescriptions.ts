@@ -23,6 +23,8 @@ const descriptions: Record<string, string> = {
   max_polls: "最大轮询次数。总超时时间 = poll_interval × max_polls。例如 2 秒 × 150 次 = 300 秒（5 分钟）。",
   model_id: "传入 API 的模型标识符，例如 black-forest-labs/FLUX.1-schnell。",
   display_name: "在界面中显示的名称，便于识别。可以设置中文名。",
+  default_prompt: "每次生成图片时自动前置的提示词。例如设置「画风：赛博朋克」后，输入「城市夜景」→ 实际发送「画风：赛博朋克，城市夜景」。",
+  show_prefix_in_history: "开启后，历史记录中显示完整提示词（含前缀）。关闭后仅显示手动输入的部分。",
 };
 
 export function getFieldDescription(key: string): string {
