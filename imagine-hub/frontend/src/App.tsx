@@ -18,7 +18,7 @@ function App() {
   const [selectedProvider, setSelectedProvider] = useState<ProviderData | null>(null);
   const [selectedModel, setSelectedModel] = useState("");
   const [genParams, setGenParams] = useState<Record<string, unknown>>({});
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imagesBase64, setImagesBase64] = useState<string[]>([]);
   const [mediaType, setMediaType] = useState("image/png");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -71,7 +71,7 @@ function App() {
     const finalPrompt = defaultPrompt ? `${defaultPrompt}, ${prompt}` : prompt;
     setLastPrompt(showPrefix ? finalPrompt : prompt);
     setLoading(true);
-    setImageBase64(null);
+    setImagesBase64([]);
     setErrorMsg(null);
     try {
       const result = await generateImage({
@@ -80,11 +80,11 @@ function App() {
         prompt: finalPrompt,
         params: genParams,
       });
-      setImageBase64(result.image_base64);
+      setImagesBase64(result.images_base64);
       setMediaType(result.media_type);
       setHistoryKey((k) => k + 1);
     } catch (err: unknown) {
-      setImageBase64(null);
+      setImagesBase64([]);
       const detail =
         err && typeof err === "object" && "response" in err
           ? (err as { response: { data: { detail?: string } } }).response?.data?.detail
@@ -173,7 +173,7 @@ function App() {
                 onSelectModel={setSelectedModel}
               />
 
-              <ImageDisplay imageBase64={imageBase64} mediaType={mediaType} loading={loading} error={errorMsg} onClearError={() => setErrorMsg(null)} modelName={selectedModel} prompt={lastPrompt} />
+              <ImageDisplay imagesBase64={imagesBase64} mediaType={mediaType} loading={loading} error={errorMsg} onClearError={() => setErrorMsg(null)} modelName={selectedModel} prompt={lastPrompt} />
 
               <ParamPanel
                 providerType={selectedProvider?.provider_type ?? ""}

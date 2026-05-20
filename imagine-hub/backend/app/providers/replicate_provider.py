@@ -18,10 +18,11 @@ class ReplicateProvider(BaseProvider):
 
     async def generate(self, prompt: str, model: str, params: dict | None = None) -> ImageResult:
         p = params or {}
+        n = p.get("n", 1)
         body = {
             "input": {
                 "prompt": prompt,
-                "num_outputs": p.get("n", 1),
+                "num_outputs": n,
                 "num_inference_steps": p.get("steps", 25),
                 "guidance_scale": p.get("guidance_scale", 7.5),
             }
@@ -57,17 +58,18 @@ class ReplicateProvider(BaseProvider):
                     status = prediction.get("status")
                     if status == "succeeded":
                         output = prediction.get("output")
-                        if isinstance(output, list):
-                            url = output[0]
-                        else:
-                            url = output
-                        async with session.get(url) as img_resp:
-                            img_resp.raise_for_status()
-                            img_bytes = await img_resp.read()
-                            return ImageResult(
-                                image_data=img_bytes,
-                                media_type=img_resp.content_type or "image/png",
-                            )
+                        urls = output if isinstance(output, list) else [output]
+                        media_type = "image/png"
+                        image_bytes_list: list[bytes] = []
+                        for url in urls:
+                            async with session.get(url) as img_resp:
+                                img_resp.raise_for_status()
+                                image_bytes_list.append(await img_resp.read())
+                                media_type = img_resp.content_type or "image/png"
+                        return ImageResult(
+                            images=image_bytes_list,
+                            media_type=media_type,
+                        )
                     elif status == "failed":
                         raise ValueError(f"Replicate prediction failed: {prediction.get('error', 'unknown')}")
                     await asyncio.sleep(POLL_INTERVAL)

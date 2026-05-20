@@ -132,12 +132,12 @@ class CustomProvider(BaseProvider):
                 raw = raw.split(",", 1)[1]
             import base64 as b64
             img_bytes = b64.b64decode(raw)
-            return ImageResult(image_data=img_bytes, media_type="image/png")
+            return ImageResult(images=[img_bytes], media_type="image/png")
         else:
             async with session.get(val) as img_resp:
                 img_resp.raise_for_status()
                 img_bytes = await img_resp.read()
                 return ImageResult(
-                    image_data=img_bytes,
+                    images=[img_bytes],
                     media_type=img_resp.content_type or "image/png",
                 )

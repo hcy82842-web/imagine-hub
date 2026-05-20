@@ -20,6 +20,7 @@ class SDWebUIProvider(BaseProvider):
             "width": p.get("width", 512),
             "height": p.get("height", 512),
             "sampler_name": p.get("sampler_name", "Euler a"),
+            "batch_size": p.get("n", 1),
         }
         if model:
             body["override_settings"] = {"sd_model_checkpoint": model}
@@ -31,8 +32,9 @@ class SDWebUIProvider(BaseProvider):
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
-                raw = data["images"][0]
-                if "," in raw:
-                    raw = raw.split(",", 1)[1]
-                img_bytes = base64.b64decode(raw)
-                return ImageResult(image_data=img_bytes, media_type="image/png")
+                image_bytes_list: list[bytes] = []
+                for raw in data["images"]:
+                    if "," in raw:
+                        raw = raw.split(",", 1)[1]
+                    image_bytes_list.append(base64.b64decode(raw))
+                return ImageResult(images=image_bytes_list, media_type="image/png")

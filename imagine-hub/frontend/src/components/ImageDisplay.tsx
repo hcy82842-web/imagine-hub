@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLang } from "../contexts/LanguageContext";
 
 interface Props {
-  imageBase64: string | null;
+  imagesBase64: string[];
   mediaType: string;
   loading: boolean;
   error?: string | null;
@@ -11,46 +11,45 @@ interface Props {
   prompt?: string;
 }
 
-export default function ImageDisplay({ imageBase64, mediaType, loading, error, onClearError, modelName, prompt }: Props) {
+export default function ImageDisplay({ imagesBase64, mediaType, loading, error, onClearError, modelName, prompt }: Props) {
   const { t } = useLang();
-  const [expanded, setExpanded] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    if (imageBase64) setCollapsed(false);
-  }, [imageBase64]);
+    if (imagesBase64.length > 0) setCollapsed(false);
+  }, [imagesBase64]);
 
   useEffect(() => {
-    if (lightboxOpen) {
+    if (lightboxIndex !== null) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [lightboxOpen]);
+  }, [lightboxIndex]);
 
   useEffect(() => {
-    if (!lightboxOpen) return;
+    if (lightboxIndex === null) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleLightboxClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [lightboxOpen]);
+  }, [lightboxIndex]);
 
-  const src = imageBase64 ? `data:${mediaType};base64,${imageBase64}` : "";
+  const src = (idx: number) => `data:${mediaType};base64,${imagesBase64[idx]}`;
 
   const downloadFilename = prompt
     ? prompt.replace(/[^\w\s\u4e00-\u9fff-]/g, '_').trim().substring(0, 30).replace(/\s+/g, '_') + '.png'
     : 'imagine-hub.png';
 
   const handleLightboxClose = () => {
-    setLightboxOpen(false);
+    setLightboxIndex(null);
     setZoom(1);
     setPan({ x: 0, y: 0 });
   };
@@ -111,7 +110,7 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
     );
   }
 
-  if (!imageBase64) {
+  if (imagesBase64.length === 0) {
     return (
       <div className="flex items-center justify-center h-72 dark:bg-gray-900/30 bg-white/50 rounded-xl border border-dashed dark:border-gray-800 border-amber-200">
         <div className="text-center">
@@ -127,7 +126,7 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
   if (collapsed) {
     return (
       <div className="dark:bg-gray-900/50 bg-white/80 rounded-xl border dark:border-gray-800 border-amber-200 p-3 flex items-center justify-between">
-        <span className="text-xs dark:text-gray-400 text-gray-500">{t("image.title")}</span>
+        <span className="text-xs dark:text-gray-400 text-gray-500">{t("image.title")} {imagesBase64.length > 1 && `(${imagesBase64.length})`}</span>
         <button onClick={() => setCollapsed(false)} className="text-xs text-blue-500 hover:text-blue-400 transition-colors">
           {t("image.show")}
         </button>
@@ -135,11 +134,13 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
     );
   }
 
+  const gridCols = imagesBase64.length === 1 ? "" : imagesBase64.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3";
+
   return (
     <>
       <div className="animate-fade-in flex flex-col items-center gap-3">
         <div className="w-full flex items-center justify-between">
-          <span className="text-xs dark:text-gray-400 text-gray-500">{t("image.title")}</span>
+          <span className="text-xs dark:text-gray-400 text-gray-500">{t("image.title")}{imagesBase64.length > 1 && ` (${imagesBase64.length})`}</span>
           <button
             onClick={() => setCollapsed(true)}
             className="text-xs dark:text-gray-500 text-gray-400 dark:hover:text-gray-300 hover:text-gray-500 transition-colors"
@@ -147,44 +148,47 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
             {t("image.hide")}
           </button>
         </div>
-        <div
-          className={`relative group rounded-xl overflow-hidden border dark:border-gray-800 border-amber-200 hover:dark:border-gray-700 hover:border-amber-300 transition-all ${
-            expanded ? "" : "max-h-96"
-          }`}
-        >
-          <img
-            src={src}
-            alt="Generated"
-            className={`cursor-pointer max-w-full ${expanded ? "" : "max-h-96"}`}
-            style={{ objectFit: "contain" }}
-            onClick={() => setLightboxOpen(true)}
-          />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
+        <div className={`w-full grid ${gridCols} gap-3`}>
+          {imagesBase64.map((b64, idx) => (
+            <div
+              key={idx}
+              className={`group relative rounded-xl overflow-hidden border dark:border-gray-800 border-amber-200 hover:dark:border-gray-700 hover:border-amber-300 transition-all cursor-pointer ${imagesBase64.length === 1 ? "max-h-96" : ""}`}
+              onClick={() => setLightboxIndex(idx)}
+            >
+              <img
+                src={`data:${mediaType};base64,${b64}`}
+                alt={`Generated ${idx + 1}`}
+                className={`w-full ${imagesBase64.length === 1 ? "max-h-96" : "h-48 sm:h-64"} object-cover`}
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none" />
+              {imagesBase64.length > 1 && (
+                <div className="absolute top-2 left-2 dark:bg-gray-900/70 bg-white/70 rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium dark:text-gray-200 text-gray-700">
+                  {idx + 1}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
-        <div className="flex gap-3 text-xs">
-          <a
-            href={src}
-            download={downloadFilename}
-            className="text-blue-500 hover:text-blue-400 transition-colors"
-          >
-            {t("image.download")}
-          </a>
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="dark:text-gray-500 text-gray-400 dark:hover:text-gray-300 hover:text-gray-500 transition-colors"
-          >
-            {expanded ? t("image.fit") : t("image.expand")}
-          </button>
-          <button
-            onClick={() => setLightboxOpen(true)}
-            className="text-blue-500 hover:text-blue-400 transition-colors"
-          >
-            {t("image.preview")}
-          </button>
-        </div>
+        {imagesBase64.length === 1 && (
+          <div className="flex gap-3 text-xs">
+            <a
+              href={src(0)}
+              download={downloadFilename}
+              className="text-blue-500 hover:text-blue-400 transition-colors"
+            >
+              {t("image.download")}
+            </a>
+            <button
+              onClick={() => setLightboxIndex(0)}
+              className="text-blue-500 hover:text-blue-400 transition-colors"
+            >
+              {t("image.preview")}
+            </button>
+          </div>
+        )}
       </div>
 
-      {lightboxOpen && (
+      {lightboxIndex !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center select-none"
           onClick={handleLightboxClose}
@@ -193,6 +197,21 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
           onMouseLeave={handleMouseUp}
         >
           <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+            {imagesBase64.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex((prev) => prev === null ? 0 : (prev - 1 + imagesBase64.length) % imagesBase64.length); setZoom(1); setPan({ x: 0, y: 0 }); }}
+                  className="dark:bg-gray-800 bg-white/20 hover:bg-white/30 rounded-lg w-8 h-8 flex items-center justify-center text-white text-sm transition-colors"
+                >&#8249;</button>
+                <span className="dark:bg-gray-800 bg-white/20 rounded-lg h-8 flex items-center justify-center text-white text-xs font-mono px-2">
+                  {(lightboxIndex ?? 0) + 1} / {imagesBase64.length}
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex((prev) => prev === null ? 0 : (prev + 1) % imagesBase64.length); setZoom(1); setPan({ x: 0, y: 0 }); }}
+                  className="dark:bg-gray-800 bg-white/20 hover:bg-white/30 rounded-lg w-8 h-8 flex items-center justify-center text-white text-sm transition-colors"
+                >&#8250;</button>
+              </>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.min(5, z + 0.5)); }}
               className="dark:bg-gray-800 bg-white/20 hover:bg-white/30 rounded-lg w-8 h-8 flex items-center justify-center text-white text-sm transition-colors"
@@ -220,8 +239,8 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
             onMouseDown={handleMouseDown}
           >
             <img
-              src={src}
-              alt="Generated"
+              src={`data:${mediaType};base64,${imagesBase64[lightboxIndex]}`}
+              alt={`Generated ${lightboxIndex + 1}`}
               style={{
                 transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
                 maxWidth: '90vw',
@@ -232,8 +251,8 @@ export default function ImageDisplay({ imageBase64, mediaType, loading, error, o
             />
           </div>
           <a
-            href={src}
-            download={downloadFilename}
+            href={`data:${mediaType};base64,${imagesBase64[lightboxIndex]}`}
+            download={imagesBase64.length > 1 ? downloadFilename.replace('.png', `_${lightboxIndex + 1}.png`) : downloadFilename}
             onClick={(e) => e.stopPropagation()}
             className="absolute bottom-6 text-xs dark:bg-gray-800 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors"
           >

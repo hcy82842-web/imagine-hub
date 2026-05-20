@@ -32,7 +32,7 @@ class GenerateRequest(BaseModel):
     params: dict = {}
 
 class GenerateResponse(BaseModel):
-    image_base64: str
+    images_base64: list[str]
     media_type: str = "image/png"
 
 class HistoryItem(BaseModel):

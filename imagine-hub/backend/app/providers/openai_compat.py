@@ -14,10 +14,11 @@ class OpenAICompatProvider(BaseProvider):
 
     async def generate(self, prompt: str, model: str, params: dict | None = None) -> ImageResult:
         p = params or {}
+        n = p.get("n", 1)
         body = {
             "model": model,
             "prompt": prompt,
-            "n": p.get("n", 1),
+            "n": n,
             "size": p.get("size", "1024x1024"),
         }
         if "quality" in p:
@@ -34,12 +35,16 @@ class OpenAICompatProvider(BaseProvider):
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
-                images = data.get("data") or data.get("images", [])
-                url = images[0]["url"]
-                async with session.get(url) as img_resp:
-                    img_resp.raise_for_status()
-                    img_bytes = await img_resp.read()
-                    return ImageResult(
-                        image_data=img_bytes,
-                        media_type=img_resp.content_type or "image/png",
-                    )
+                entries = data.get("data") or data.get("images", [])
+                media_type = "image/png"
+                image_bytes_list: list[bytes] = []
+                for entry in entries:
+                    url = entry["url"]
+                    async with session.get(url) as img_resp:
+                        img_resp.raise_for_status()
+                        image_bytes_list.append(await img_resp.read())
+                        media_type = img_resp.content_type or "image/png"
+                return ImageResult(
+                    images=image_bytes_list,
+                    media_type=media_type,
+                )

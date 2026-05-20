@@ -44,7 +44,13 @@ async def generate_image(req: GenerateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    img_path = save_image(result.image_data)
+    images_b64: list[str] = []
+    first_path = ""
+    for i, img_bytes in enumerate(result.images):
+        b64_str = base64.b64encode(img_bytes).decode()
+        images_b64.append(b64_str)
+        if i == 0:
+            first_path = save_image(img_bytes)
 
     with Session(engine) as session:
         history = GenerationHistory(
@@ -53,14 +59,14 @@ async def generate_image(req: GenerateRequest):
             provider_name=provider_cfg.name,
             model_name=req.model,
             params=json.dumps(req.params),
-            image_path=img_path,
+            image_path=first_path,
             created_at=datetime.now().isoformat(),
         )
         session.add(history)
         session.commit()
 
     return GenerateResponse(
-        image_base64=base64.b64encode(result.image_data).decode(),
+        images_base64=images_b64,
         media_type=result.media_type,
     )
 

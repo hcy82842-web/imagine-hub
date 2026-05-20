@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class ImageResult:
-    image_data: bytes
+    images: list[bytes]
     media_type: str = "image/png"
 
 class BaseProvider(ABC):
