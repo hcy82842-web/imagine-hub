@@ -209,6 +209,10 @@ export default function Settings({ onProvidersChange }: Props) {
   const [customCfg, setCustomCfg] = useState<CustomConfigFields>(defaultCustomCustom);
   const [defaultPrompt, setDefaultPrompt] = useState(() => localStorage.getItem("imagine_default_prompt") || "");
   const [showPrefixInHistory, setShowPrefixInHistory] = useState(() => localStorage.getItem("imagine_show_prefix_in_history") !== "false");
+  const [genStrategy, setGenStrategy] = useState(() => localStorage.getItem("imagine_gen_strategy") || "single_call");
+  const [defaultSize, setDefaultSize] = useState(() => localStorage.getItem("imagine_default_size") || "1920x1080");
+  const [defaultQuality, setDefaultQuality] = useState(() => localStorage.getItem("imagine_default_quality") || "hd");
+  const [defaultN, setDefaultN] = useState(() => parseInt(localStorage.getItem("imagine_default_n") || "1"));
 
   const getProviderTypes = () => [
     { value: "openai_compat", label: t("type.openai_compat") },
@@ -490,6 +494,52 @@ export default function Settings({ onProvidersChange }: Props) {
             />
             <span className="text-sm dark:text-gray-300 text-gray-600">{t("preferences.show_prefix_in_history")}</span>
           </label>
+          <div className="border-t dark:border-gray-800 border-amber-200 pt-4">
+            <label className="text-sm dark:text-gray-400 text-gray-500 mb-3 block">{t("preferences.default_params")}</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] dark:text-gray-500 text-gray-400 mb-1 block">{t("param_label_size")}</label>
+                <select value={defaultSize} onChange={(e) => { setDefaultSize(e.target.value); localStorage.setItem("imagine_default_size", e.target.value); }}
+                  className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors">
+                  {["256x256","512x512","768x768","1024x1024","1536x1536","768x1024","768x1360","1024x1360","1024x1792","1024x768","1360x768","1360x1024","1792x1024","1536x640","1920x1080"].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] dark:text-gray-500 text-gray-400 mb-1 block">{t("param_label_quality")}</label>
+                <select value={defaultQuality} onChange={(e) => { setDefaultQuality(e.target.value); localStorage.setItem("imagine_default_quality", e.target.value); }}
+                  className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors">
+                  <option value="standard">standard</option>
+                  <option value="hd">hd</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] dark:text-gray-500 text-gray-400 mb-1 block">{t("param_label_n")}</label>
+                <input type="number" min={1} value={defaultN} onChange={(e) => { const v = parseInt(e.target.value) || 1; setDefaultN(v); localStorage.setItem("imagine_default_n", String(v)); }}
+                  className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors" />
+              </div>
+            </div>
+            <p className="text-[10px] dark:text-gray-500 text-gray-400 mt-2">{t("preferences.default_params_hint")}</p>
+          </div>
+          <div>
+            <label className="text-sm dark:text-gray-400 text-gray-500 mb-2 flex items-center gap-1">
+              {t("preferences.gen_strategy")}
+              <HelpTip fieldKey="gen_strategy" />
+            </label>
+            <label className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${genStrategy === "single_call" ? "dark:bg-blue-900/20 bg-blue-100/50 border-blue-400/50" : "dark:bg-gray-800/50 bg-amber-50/50"} border dark:border-gray-700 border-amber-200 mb-2`}>
+              <input type="radio" name="genStrategy" value="single_call" checked={genStrategy === "single_call"} onChange={() => { setGenStrategy("single_call"); localStorage.setItem("imagine_gen_strategy", "single_call"); }} className="mt-0.5" />
+              <div>
+                <div className="text-sm font-medium dark:text-gray-200 text-gray-700">{t("preferences.gen_strategy_single")}</div>
+              </div>
+            </label>
+            <label className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${genStrategy === "multi_call" ? "dark:bg-blue-900/20 bg-blue-100/50 border-blue-400/50" : "dark:bg-gray-800/50 bg-amber-50/50"} border dark:border-gray-700 border-amber-200`}>
+              <input type="radio" name="genStrategy" value="multi_call" checked={genStrategy === "multi_call"} onChange={() => { setGenStrategy("multi_call"); localStorage.setItem("imagine_gen_strategy", "multi_call"); }} className="mt-0.5" />
+              <div>
+                <div className="text-sm font-medium dark:text-gray-200 text-gray-700">{t("preferences.gen_strategy_multi")}</div>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 

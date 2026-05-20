@@ -13,18 +13,19 @@ PROVIDER_MAP: dict[str, type[BaseProvider]] = {
 
 PARAM_SCHEMAS: dict[str, list[dict]] = {
     "openai_compat": [
-        {"key": "size", "label": "Size", "type": "select", "default": "1024x1024",
+        {"key": "size", "label": "Size", "type": "select", "default": "1920x1080",
          "options": [
              "256x256", "512x512", "768x768", "1024x1024", "1536x1536",
              "768x1024", "768x1360", "1024x1360", "1024x1792",
              "1024x768", "1360x768", "1360x1024", "1792x1024",
              "1536x640", "1920x1080",
          ]},
-        {"key": "quality", "label": "Quality", "type": "select", "default": "standard",
+        {"key": "quality", "label": "Quality", "type": "select", "default": "hd",
          "options": ["standard", "hd"]},
-        {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1, "max": 10},
+        {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1},
     ],
     "sd_webui": [
+        {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1},
         {"key": "width", "label": "Width", "type": "number", "default": 512, "min": 64, "max": 2048, "step": 64},
         {"key": "height", "label": "Height", "type": "number", "default": 512, "min": 64, "max": 2048, "step": 64},
         {"key": "steps", "label": "Steps", "type": "number", "default": 20, "min": 1, "max": 150},
@@ -39,7 +40,7 @@ PARAM_SCHEMAS: dict[str, list[dict]] = {
          "options": ["1024x1024", "1360x768", "768x1360", "1536x640", "640x1536"]},
         {"key": "steps", "label": "Steps", "type": "number", "default": 25, "min": 1, "max": 50},
         {"key": "guidance_scale", "label": "Guidance Scale", "type": "number", "default": 7.5, "min": 1, "max": 20, "step": 0.5},
-        {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1, "max": 4},
+        {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1},
     ],
     "custom": [
         {"key": "endpoint", "label": "Full Endpoint URL", "type": "text", "default": ""},

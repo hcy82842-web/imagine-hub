@@ -5,6 +5,8 @@ const en: Record<string, string> = {
 
   "app.welcome": "Welcome to Imagine Hub",
   "app.welcome_hint": "Go to",
+  "app.add_task": "New Task",
+  "app.task_title": "Task",
   "app.no_providers": "No providers configured",
 
   "settings.title": "Provider Settings",
@@ -94,6 +96,8 @@ const en: Record<string, string> = {
   "field.template_hint": "Use {{prompt}} for prompt, {{model}} for model",
 
   "preferences.title": "Preferences",
+  "preferences.default_params": "Default Params for New Tasks",
+  "preferences.default_params_hint": "Applied to new tasks automatically. Each task can be adjusted individually.",
   "preferences.language": "Language",
   "preferences.theme": "Theme",
   "preferences.dark": "Dark",
@@ -103,6 +107,10 @@ const en: Record<string, string> = {
   "preferences.default_prompt_hint": "Automatically prepended to every generation prompt. No need to type it each time.",
   "preferences.default_prompt_placeholder": "e.g. masterpiece, best quality, 8K, cinematic lighting",
   "preferences.show_prefix_in_history": "Show full prompt (with prefix) in history",
+  "preferences.gen_strategy": "Generation Strategy",
+  "preferences.gen_strategy_single": "Single-call — send n=X to API, expect multiple images in one response",
+  "preferences.gen_strategy_multi": "Multi-call — send n=1, repeat X times, each call billed separately",
+  "preferences.gen_strategy_hint": "Single-call: for APIs that natively support n>1 (e.g. Replicate, SD WebUI). Multi-call: for APIs that ignore the n parameter (most proxy endpoints), each request is billed separately.",
 
   "model.select_provider": "Select Provider",
   "model.placeholder": "Enter model ID",
@@ -120,6 +128,9 @@ const en: Record<string, string> = {
   "image.zoom_in": "Zoom In",
   "image.zoom_out": "Zoom Out",
   "image.close": "Close",
+  "image.debug_info": "Requested: {requested} · Received: {received} · Mode: {strategy} ({calls} call(s))",
+  "image.debug_single": "Single-call",
+  "image.debug_multi": "Multi-call",
 
   "param.parameters": "Parameters",
   "param_label_size": "Size",

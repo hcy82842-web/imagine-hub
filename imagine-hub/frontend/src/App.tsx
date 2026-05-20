@@ -6,26 +6,50 @@ import ParamPanel from "./components/ParamPanel";
 import ChatInput from "./components/ChatInput";
 import ImageDisplay from "./components/ImageDisplay";
 import ToastContainer, { showToast } from "./components/Toast";
-import { listProviders, generateImage, getNetworkInfo, ProviderData } from "./api/client";
+import { listProviders, generateImage, getNetworkInfo, ProviderData, GenerateResult } from "./api/client";
 import { useLang } from "./contexts/LanguageContext";
 
 type Page = "home" | "history" | "settings";
+
+interface DebugInfo {
+  nRequested: number;
+  nReceived: number;
+  strategy: string;
+  apiCalls: number;
+  rateLimitInfo: Record<string, string>;
+}
+
+interface GenSlot {
+  id: string;
+  selectedProvider: ProviderData | null;
+  selectedModel: string;
+  genParams: Record<string, unknown>;
+  imagesBase64: string[];
+  mediaType: string;
+  loading: boolean;
+  errorMsg: string | null;
+  lastPrompt: string;
+  genDebug: DebugInfo | null;
+  collapsed: boolean;
+}
+
+function getDefaultParams(): Record<string, unknown> {
+  const params: Record<string, unknown> = {};
+  const size = localStorage.getItem("imagine_default_size");
+  const quality = localStorage.getItem("imagine_default_quality");
+  const n = localStorage.getItem("imagine_default_n");
+  if (size) params.size = size;
+  if (quality) params.quality = quality;
+  if (n) params.n = parseInt(n);
+  return params;
+}
 
 function App() {
   const { t } = useLang();
   const [page, setPage] = useState<Page>("home");
   const [providers, setProviders] = useState<ProviderData[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<ProviderData | null>(null);
-  const [selectedModel, setSelectedModel] = useState("");
-  const [genParams, setGenParams] = useState<Record<string, unknown>>({});
-  const [imagesBase64, setImagesBase64] = useState<string[]>([]);
-  const [mediaType, setMediaType] = useState("image/png");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [lastPrompt, setLastPrompt] = useState("");
-  const [restorePrompt, setRestorePrompt] = useState("");
-  const [restoreKey, setRestoreKey] = useState(0);
-  const [historyKey, setHistoryKey] = useState(0);
+  const [slots, setSlots] = useState<GenSlot[]>([]);
+  const [nextSlotId, setNextSlotId] = useState(1);
   const [lanUrl, setLanUrl] = useState("");
 
   useEffect(() => {
@@ -36,8 +60,8 @@ function App() {
     try {
       const data = await listProviders();
       setProviders(data);
-      if (data.length > 0 && !selectedProvider) {
-        setSelectedProvider(data[0]);
+      if (data.length > 0 && slots.length === 0) {
+        addSlot();
       }
     } catch {
       setProviders([]);
@@ -64,27 +88,77 @@ function App() {
     return null;
   }
 
-  const handleSend = async (prompt: string) => {
-    if (!selectedProvider) return;
+  const addSlot = (initialPrompt?: string) => {
+    const id = `slot_${nextSlotId}`;
+    setNextSlotId((k) => k + 1);
+    setSlots((prev) => [
+      ...prev,
+      {
+        id,
+        selectedProvider: providers.length > 0 ? providers[0] : null,
+        selectedModel: "",
+        genParams: getDefaultParams(),
+        imagesBase64: [],
+        mediaType: "image/png",
+        loading: false,
+        errorMsg: null,
+        lastPrompt: "",
+        genDebug: null,
+        collapsed: false,
+      },
+    ]);
+    if (page !== "home") setPage("home");
+  };
+
+  const removeSlot = (id: string) => {
+    setSlots((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const toggleCollapse = (id: string) => {
+    setSlots((prev) => prev.map((s) => (s.id === id ? { ...s, collapsed: !s.collapsed } : s)));
+  };
+
+  const updateSlot = (id: string, partial: Partial<GenSlot>) => {
+    setSlots((prev) => prev.map((s) => (s.id === id ? { ...s, ...partial } : s)));
+  };
+
+  const handleSend = async (slotId: string, prompt: string) => {
+    const slot = slots.find((s) => s.id === slotId);
+    if (!slot || !slot.selectedProvider) return;
+
     const defaultPrompt = localStorage.getItem("imagine_default_prompt") || "";
     const showPrefix = localStorage.getItem("imagine_show_prefix_in_history") !== "false";
     const finalPrompt = defaultPrompt ? `${defaultPrompt}, ${prompt}` : prompt;
-    setLastPrompt(showPrefix ? finalPrompt : prompt);
-    setLoading(true);
-    setImagesBase64([]);
-    setErrorMsg(null);
+    const strategy = localStorage.getItem("imagine_gen_strategy") || "single_call";
+
+    updateSlot(slotId, {
+      loading: true,
+      imagesBase64: [],
+      errorMsg: null,
+      genDebug: null,
+      lastPrompt: showPrefix ? finalPrompt : prompt,
+    });
+
     try {
-      const result = await generateImage({
-        provider_id: selectedProvider.id,
-        model: selectedModel,
+      const result: GenerateResult = await generateImage({
+        provider_id: slot.selectedProvider.id,
+        model: slot.selectedModel,
         prompt: finalPrompt,
-        params: genParams,
+        params: { ...slot.genParams, strategy },
       });
-      setImagesBase64(result.images_base64);
-      setMediaType(result.media_type);
-      setHistoryKey((k) => k + 1);
+      updateSlot(slotId, {
+        imagesBase64: result.images_base64,
+        mediaType: result.media_type,
+        loading: false,
+        genDebug: {
+          nRequested: result.n_requested,
+          nReceived: result.n_received,
+          strategy: result.strategy,
+          apiCalls: result.api_calls,
+          rateLimitInfo: result.rate_limit_info,
+        },
+      });
     } catch (err: unknown) {
-      setImagesBase64([]);
       const detail =
         err && typeof err === "object" && "response" in err
           ? (err as { response: { data: { detail?: string } } }).response?.data?.detail
@@ -98,10 +172,8 @@ function App() {
       } else {
         msg = t("toast.generate_failed");
       }
-      setErrorMsg(msg);
+      updateSlot(slotId, { loading: false, errorMsg: msg });
       showToast(msg, "error");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -110,6 +182,106 @@ function App() {
     { key: "history", labelKey: "nav.history" },
     { key: "settings", labelKey: "nav.settings" },
   ];
+
+  const renderSlot = (slot: GenSlot) => (
+    <div
+      key={slot.id}
+      className="dark:bg-gray-900/40 bg-white/60 rounded-xl border dark:border-gray-800 border-amber-200 overflow-hidden"
+    >
+      <div className="flex items-center justify-between px-5 py-3 dark:bg-gray-900/60 bg-amber-100/40 border-b dark:border-gray-800 border-amber-200">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium dark:text-gray-200 text-gray-700">
+            {t("app.task_title")} {slots.indexOf(slot) + 1}
+          </span>
+          {slot.lastPrompt && (
+            <span className="text-xs dark:text-gray-500 text-gray-400 truncate max-w-[200px] sm:max-w-[400px]">
+              {slot.lastPrompt}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {slot.imagesBase64.length > 0 && (
+            <span className="text-xs dark:text-gray-500 text-gray-400">{slot.imagesBase64.length} img</span>
+          )}
+          <button
+            onClick={() => toggleCollapse(slot.id)}
+            className="dark:text-gray-500 text-gray-400 dark:hover:text-gray-300 hover:text-gray-500 text-sm transition-colors"
+          >
+            {slot.collapsed ? "▸" : "▾"}
+          </button>
+          <button
+            onClick={() => removeSlot(slot.id)}
+            className="text-red-400 hover:text-red-300 text-sm transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {!slot.collapsed && (
+        <div className="p-5 space-y-5">
+          <ModelSwitcher
+            providers={providers}
+            selectedProvider={slot.selectedProvider}
+            selectedModel={slot.selectedModel}
+            onSelectProvider={(p) => updateSlot(slot.id, { selectedProvider: p, selectedModel: "" })}
+            onSelectModel={(m) => updateSlot(slot.id, { selectedModel: m })}
+          />
+
+          {slot.selectedProvider && (
+            <ParamPanel
+              providerType={slot.selectedProvider.provider_type}
+              params={slot.genParams}
+              onChange={(p) => updateSlot(slot.id, { genParams: p })}
+            />
+          )}
+
+          <ImageDisplay
+            imagesBase64={slot.imagesBase64}
+            mediaType={slot.mediaType}
+            loading={slot.loading}
+            error={slot.errorMsg}
+            onClearError={() => updateSlot(slot.id, { errorMsg: null })}
+            modelName={slot.selectedModel}
+            prompt={slot.lastPrompt}
+            nRequested={slot.genDebug?.nRequested}
+            nReceived={slot.genDebug?.nReceived}
+            strategy={slot.genDebug?.strategy}
+            apiCalls={slot.genDebug?.apiCalls}
+            rateLimitInfo={slot.genDebug?.rateLimitInfo}
+          />
+
+          <ChatInput onSend={(p) => handleSend(slot.id, p)} loading={slot.loading} />
+        </div>
+      )}
+
+      {slot.collapsed && slot.imagesBase64.length > 0 && (
+        <div className="px-5 py-3">
+          <div className="flex gap-2 overflow-x-auto">
+            {slot.imagesBase64.slice(0, 6).map((b64, i) => (
+              <img
+                key={i}
+                src={`data:${slot.mediaType};base64,${b64}`}
+                alt=""
+                className="h-16 w-16 object-cover rounded-lg border dark:border-gray-700 border-amber-200 flex-shrink-0"
+              />
+            ))}
+            {slot.imagesBase64.length > 6 && (
+              <div className="h-16 w-16 flex items-center justify-center dark:bg-gray-800 bg-amber-50 rounded-lg text-xs dark:text-gray-400 text-gray-500 flex-shrink-0">
+                +{slot.imagesBase64.length - 6}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {slot.collapsed && slot.errorMsg && (
+        <div className="px-5 pb-3">
+          <div className="text-xs text-red-400 truncate">{slot.errorMsg}</div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -150,7 +322,7 @@ function App() {
       </nav>
 
       {page === "home" && (
-        <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-6 gap-6 animate-slide-up">
+        <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4 sm:p-6 gap-5 animate-slide-up">
           {providers.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
@@ -165,23 +337,14 @@ function App() {
             </div>
           ) : (
             <>
-              <ModelSwitcher
-                providers={providers}
-                selectedProvider={selectedProvider}
-                selectedModel={selectedModel}
-                onSelectProvider={setSelectedProvider}
-                onSelectModel={setSelectedModel}
-              />
+              {slots.map(renderSlot)}
 
-              <ImageDisplay imagesBase64={imagesBase64} mediaType={mediaType} loading={loading} error={errorMsg} onClearError={() => setErrorMsg(null)} modelName={selectedModel} prompt={lastPrompt} />
-
-              <ParamPanel
-                providerType={selectedProvider?.provider_type ?? ""}
-                params={genParams}
-                onChange={setGenParams}
-              />
-
-              <ChatInput key={restoreKey} onSend={handleSend} loading={loading} initialPrompt={restorePrompt} />
+              <button
+                onClick={() => addSlot()}
+                className="w-full py-3 rounded-xl border-2 border-dashed dark:border-gray-700 border-amber-300 dark:text-gray-400 text-gray-500 dark:hover:border-gray-500 hover:border-blue-400 dark:hover:text-gray-200 hover:text-gray-700 text-sm font-medium transition-colors"
+              >
+                + {t("app.add_task")}
+              </button>
             </>
           )}
         </div>
@@ -190,7 +353,11 @@ function App() {
       {page === "history" && (
         <div className="flex-1 max-w-3xl mx-auto w-full p-6 animate-slide-up">
           <h2 className="text-2xl font-bold mb-6 dark:text-gray-100 text-gray-800">{t("history.title")}</h2>
-          <HistoryList key={historyKey} onUsePrompt={(p) => { setRestorePrompt(p); setRestoreKey((k) => k + 1); setPage("home"); }} />
+          <HistoryList
+            onUsePrompt={(p) => {
+              addSlot(p);
+            }}
+          />
         </div>
       )}
 

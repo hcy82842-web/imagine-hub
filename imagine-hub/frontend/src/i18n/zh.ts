@@ -5,6 +5,8 @@ const zh: Record<string, string> = {
 
   "app.welcome": "欢迎使用 Imagine Hub",
   "app.welcome_hint": "前往",
+  "app.add_task": "新建任务",
+  "app.task_title": "任务",
   "app.no_providers": "暂无提供商",
 
   "settings.title": "提供商设置",
@@ -94,6 +96,8 @@ const zh: Record<string, string> = {
   "field.template_hint": "使用 {{prompt}} 表示提示词，{{model}} 表示模型",
 
   "preferences.title": "偏好设置",
+  "preferences.default_params": "新建任务默认参数",
+  "preferences.default_params_hint": "新增任务时自动使用此参数，每个任务可单独调整。",
   "preferences.language": "界面语言",
   "preferences.theme": "主题",
   "preferences.dark": "暗色",
@@ -103,6 +107,10 @@ const zh: Record<string, string> = {
   "preferences.default_prompt_hint": "所有生成都会自动附加此内容到提示词前面，无需重复输入。",
   "preferences.default_prompt_placeholder": "例如：masterpiece, best quality, 8K, cinematic lighting",
   "preferences.show_prefix_in_history": "历史记录中显示完整提示词（含前缀）",
+  "preferences.gen_strategy": "生成策略",
+  "preferences.gen_strategy_single": "单次调用 — 发送 n=X 给 API，一次请求返回多张图片",
+  "preferences.gen_strategy_multi": "多次调用 — 发送 n=1，重复请求 X 次，每次单独计费",
+  "preferences.gen_strategy_hint": "单次调用：适用于原生支持多图的 API（如 Replicate、SD WebUI）。多次调用：适用于忽略 n 参数的 API（如大多数代理转发），每次请求单独计费。",
 
   "model.select_provider": "选择提供商",
   "model.placeholder": "输入模型 ID",
@@ -120,6 +128,9 @@ const zh: Record<string, string> = {
   "image.zoom_in": "放大",
   "image.zoom_out": "缩小",
   "image.close": "关闭",
+  "image.debug_info": "已请求 {requested} 张 · API 返回 {received} 张 · 模式：{strategy}（{calls} 次请求）",
+  "image.debug_single": "单次调用",
+  "image.debug_multi": "多次调用",
 
   "param.parameters": "参数",
   "param_label_size": "分辨率",

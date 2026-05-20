@@ -9,9 +9,14 @@ interface Props {
   onClearError?: () => void;
   modelName?: string;
   prompt?: string;
+  nRequested?: number;
+  nReceived?: number;
+  strategy?: string;
+  apiCalls?: number;
+  rateLimitInfo?: Record<string, string>;
 }
 
-export default function ImageDisplay({ imagesBase64, mediaType, loading, error, onClearError, modelName, prompt }: Props) {
+export default function ImageDisplay({ imagesBase64, mediaType, loading, error, onClearError, modelName, prompt, nRequested, nReceived, strategy, apiCalls, rateLimitInfo }: Props) {
   const { t } = useLang();
   const [collapsed, setCollapsed] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -184,6 +189,24 @@ export default function ImageDisplay({ imagesBase64, mediaType, loading, error, 
             >
               {t("image.preview")}
             </button>
+          </div>
+        )}
+        {nRequested !== undefined && nReceived !== undefined && (
+          <div className="text-[10px] dark:text-gray-500 text-gray-400 text-center">
+            {t("image.debug_info")
+              .replace("{requested}", String(nRequested))
+              .replace("{received}", String(nReceived))
+              .replace("{strategy}", strategy === "multi_call" ? t("image.debug_multi") : t("image.debug_single"))
+              .replace("{calls}", String(apiCalls ?? 1))}
+          </div>
+        )}
+        {rateLimitInfo && Object.keys(rateLimitInfo).length > 0 && (
+          <div className="text-[10px] dark:text-gray-600 text-gray-400 text-center font-mono">
+            {Object.entries(rateLimitInfo).map(([k, v]) => (
+              <span key={k} className="inline-block after:content-['·'] last:after:content-[''] after:mx-1.5">
+                {k.replace(/^x-ratelimit-/i, "")}: {v}
+              </span>
+            ))}
           </div>
         )}
       </div>

@@ -19,7 +19,7 @@ class OpenAICompatProvider(BaseProvider):
             "model": model,
             "prompt": prompt,
             "n": n,
-            "size": p.get("size", "1024x1024"),
+            "size": p.get("size", "1920x1080"),
         }
         if "quality" in p:
             body["quality"] = p["quality"]
@@ -44,7 +44,13 @@ class OpenAICompatProvider(BaseProvider):
                         img_resp.raise_for_status()
                         image_bytes_list.append(await img_resp.read())
                         media_type = img_resp.content_type or "image/png"
+                extra = {}
+                for h, v in resp.headers.items():
+                    hl = h.lower()
+                    if hl.startswith("x-ratelimit-") or hl.startswith("x-rate-limit-") or hl in ("x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset"):
+                        extra[h] = v
                 return ImageResult(
                     images=image_bytes_list,
                     media_type=media_type,
+                    extra=extra,
                 )

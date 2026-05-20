@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class ImageResult:
     images: list[bytes]
     media_type: str = "image/png"
+    extra: dict = field(default_factory=dict)
 
 class BaseProvider(ABC):
     def __init__(self, base_url: str, api_key: str = ""):

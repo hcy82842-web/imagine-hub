@@ -34,6 +34,11 @@ class GenerateRequest(BaseModel):
 class GenerateResponse(BaseModel):
     images_base64: list[str]
     media_type: str = "image/png"
+    n_requested: int = 0
+    n_received: int = 0
+    strategy: str = "single_call"
+    api_calls: int = 1
+    rate_limit_info: dict = {}
 
 class HistoryItem(BaseModel):
     id: int

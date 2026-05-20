@@ -25,6 +25,7 @@ const descriptions: Record<string, string> = {
   display_name: "在界面中显示的名称，便于识别。可以设置中文名。",
   default_prompt: "每次生成图片时自动前置的提示词。例如设置「画风：赛博朋克」后，输入「城市夜景」→ 实际发送「画风：赛博朋克，城市夜景」。",
   show_prefix_in_history: "开启后，历史记录中显示完整提示词（含前缀）。关闭后仅显示手动输入的部分。",
+  gen_strategy: "单次调用：发送 n 值给 API 期望一次返回多张（适合 Replicate、SD WebUI 等原生支持）。多次调用：循环发送 n=1 多次调用（适合忽略 n 参数的 API，每次调用单独计费）。",
 };
 
 export function getFieldDescription(key: string): string {

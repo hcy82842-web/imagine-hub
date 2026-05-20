@@ -9,6 +9,7 @@ from app.models.provider import ProviderConfig
 from app.models.history import GenerationHistory
 from app.models.schemas import GenerateRequest, GenerateResponse
 from app.providers import get_provider, get_param_schema
+from app.providers.base import ImageResult
 from app.utils.image_storage import save_image
 
 router = APIRouter(prefix="/api", tags=["generate"])
@@ -24,8 +25,27 @@ async def generate_image(req: GenerateRequest):
         provider_cfg.provider_type, provider_cfg.base_url, provider_cfg.api_key, provider_cfg.config
     )
 
+    n_requested = req.params.get("n", 1)
+    strategy = req.params.pop("strategy", "single_call")
+
     try:
-        result = await provider.generate(req.prompt, req.model, req.params)
+        if strategy == "multi_call" and n_requested > 1:
+            all_images: list[bytes] = []
+            api_call_count = 0
+            media_type = "image/png"
+            for _ in range(n_requested):
+                call_params = {**req.params, "n": 1}
+                part = await provider.generate(req.prompt, req.model, call_params)
+                all_images.extend(part.images)
+                media_type = part.media_type
+                api_call_count += 1
+            result = ImageResult(images=all_images, media_type=media_type)
+            n_received = len(all_images)
+            api_calls_val = api_call_count
+        else:
+            result = await provider.generate(req.prompt, req.model, req.params)
+            n_received = len(result.images)
+            api_calls_val = 1
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except TimeoutError:
@@ -68,6 +88,11 @@ async def generate_image(req: GenerateRequest):
     return GenerateResponse(
         images_base64=images_b64,
         media_type=result.media_type,
+        n_requested=n_requested,
+        n_received=n_received,
+        strategy=strategy,
+        api_calls=api_calls_val,
+        rate_limit_info=result.extra,
     )
 
 @router.get("/providers/{provider_id}/models")

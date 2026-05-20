@@ -63,6 +63,11 @@ export async function fetchModels(providerId: number): Promise<string[]> {
 export interface GenerateResult {
   images_base64: string[];
   media_type: string;
+  n_requested: number;
+  n_received: number;
+  strategy: string;
+  api_calls: number;
+  rate_limit_info: Record<string, string>;
 }
 
 export async function generateImage(data: {
