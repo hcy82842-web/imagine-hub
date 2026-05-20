@@ -134,4 +134,13 @@ export async function getNetworkInfo(): Promise<NetworkInfo> {
   return res.data;
 }
 
+export async function testTransformerApi(data: {
+  base_url: string;
+  api_key: string;
+  model: string;
+}): Promise<{ success: boolean; ms: number }> {
+  const res = await api.post("/test-transformer", data);
+  return res.data;
+}
+
 export default api;

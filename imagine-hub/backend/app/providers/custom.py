@@ -10,6 +10,32 @@ class CustomProvider(BaseProvider):
         self._cfg = json.loads(config)
 
     async def list_models(self) -> list[str]:
+        endpoint = self._cfg.get("model_list_endpoint", "")
+        if endpoint:
+            method = self._cfg.get("model_list_method", "POST").upper()
+            body_tpl = self._cfg.get("model_list_body", '{"key": "{{api_key}}"}')
+            body_str = body_tpl.replace("{{api_key}}", self.api_key or "")
+            arr_path = self._cfg.get("model_list_path", "")
+            id_field = self._cfg.get("model_list_id_field", "model_id")
+            headers = {"Content-Type": "application/json"}
+            if not endpoint.startswith(("http://", "https://")):
+                endpoint = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+            async with aiohttp.ClientSession() as session:
+                body = json.loads(body_str) if body_str else None
+                async with session.request(method, endpoint, json=body, headers=headers) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+            arr = data
+            for p in arr_path.split(".") if arr_path else []:
+                if isinstance(arr, dict):
+                    arr = arr.get(p, [])
+                elif isinstance(arr, list) and p.isdigit():
+                    arr = arr[int(p)] if int(p) < len(arr) else []
+                else:
+                    arr = []
+                    break
+            if isinstance(arr, list):
+                return [item[id_field] for item in arr if isinstance(item, dict) and id_field in item]
         return ["custom"]
 
     async def generate(self, prompt: str, model: str, params: dict | None = None) -> ImageResult:
@@ -28,7 +54,7 @@ class CustomProvider(BaseProvider):
 
         request_template = cfg.get("request_template", '{"prompt": "{{prompt}}"}')
 
-        body_str = request_template.replace("{{prompt}}", prompt).replace("{{model}}", model)
+        body_str = request_template.replace("{{prompt}}", prompt).replace("{{model}}", model).replace("{{api_key}}", self.api_key)
         body = json.loads(body_str) if method == "POST" else None
 
         async with aiohttp.ClientSession() as session:

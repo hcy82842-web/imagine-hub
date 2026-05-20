@@ -26,6 +26,7 @@ const descriptions: Record<string, string> = {
   default_prompt: "每次生成图片时自动前置的提示词。例如设置「画风：赛博朋克」后，输入「城市夜景」→ 实际发送「画风：赛博朋克，城市夜景」。",
   show_prefix_in_history: "开启后，历史记录中显示完整提示词（含前缀）。关闭后仅显示手动输入的部分。",
   gen_strategy: "单次调用：发送 n 值给 API 期望一次返回多张（适合 Replicate、SD WebUI 等原生支持）。多次调用：循环发送 n=1 多次调用（适合忽略 n 参数的 API，每次调用单独计费）。",
+  prompt_transformer: "通过额外的大语言模型（如 DeepSeek、ChatGPT）将中文提示词转化为英文，并根据当前生图模型自动生成负面提示词。需配置 LLM 的 API 地址和密钥。",
 };
 
 export function getFieldDescription(key: string): string {

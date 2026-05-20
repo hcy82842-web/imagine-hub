@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Settings from "./components/Settings";
 import HistoryList from "./components/HistoryList";
 import ModelSwitcher from "./components/ModelSwitcher";
@@ -31,6 +31,7 @@ interface GenSlot {
   lastPrompt: string;
   genDebug: DebugInfo | null;
   collapsed: boolean;
+  transformPrompt: boolean;
 }
 
 function getDefaultParams(): Record<string, unknown> {
@@ -49,8 +50,8 @@ function App() {
   const [page, setPage] = useState<Page>("home");
   const [providers, setProviders] = useState<ProviderData[]>([]);
   const [slots, setSlots] = useState<GenSlot[]>([]);
-  const [nextSlotId, setNextSlotId] = useState(1);
   const [lanUrl, setLanUrl] = useState("");
+  const inited = useRef(false);
 
   useEffect(() => {
     getNetworkInfo().then((info) => setLanUrl(info.lan_url)).catch(() => {});
@@ -60,7 +61,8 @@ function App() {
     try {
       const data = await listProviders();
       setProviders(data);
-      if (data.length > 0 && slots.length === 0) {
+      if (data.length > 0 && slots.length === 0 && !inited.current) {
+        inited.current = true;
         addSlot();
       }
     } catch {
@@ -89,8 +91,7 @@ function App() {
   }
 
   const addSlot = (initialPrompt?: string) => {
-    const id = `slot_${nextSlotId}`;
-    setNextSlotId((k) => k + 1);
+    const id = crypto.randomUUID();
     setSlots((prev) => [
       ...prev,
       {
@@ -102,9 +103,10 @@ function App() {
         mediaType: "image/png",
         loading: false,
         errorMsg: null,
-        lastPrompt: "",
+        lastPrompt: initialPrompt || "",
         genDebug: null,
         collapsed: false,
+        transformPrompt: false,
       },
     ]);
     if (page !== "home") setPage("home");
@@ -144,7 +146,7 @@ function App() {
         provider_id: slot.selectedProvider.id,
         model: slot.selectedModel,
         prompt: finalPrompt,
-        params: { ...slot.genParams, strategy },
+        params: { ...slot.genParams, transform_prompt: slot.transformPrompt, strategy },
       });
       updateSlot(slotId, {
         imagesBase64: result.images_base64,
@@ -183,7 +185,7 @@ function App() {
     { key: "settings", labelKey: "nav.settings" },
   ];
 
-  const renderSlot = (slot: GenSlot) => (
+  const renderSlot = (slot: GenSlot, index: number) => (
     <div
       key={slot.id}
       className="dark:bg-gray-900/40 bg-white/60 rounded-xl border dark:border-gray-800 border-amber-200 overflow-hidden"
@@ -191,7 +193,7 @@ function App() {
       <div className="flex items-center justify-between px-5 py-3 dark:bg-gray-900/60 bg-amber-100/40 border-b dark:border-gray-800 border-amber-200">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium dark:text-gray-200 text-gray-700">
-            {t("app.task_title")} {slots.indexOf(slot) + 1}
+            {t("app.task_title")} {index + 1}
           </span>
           {slot.lastPrompt && (
             <span className="text-xs dark:text-gray-500 text-gray-400 truncate max-w-[200px] sm:max-w-[400px]">
@@ -209,6 +211,12 @@ function App() {
           >
             {slot.collapsed ? "▸" : "▾"}
           </button>
+          <label className="flex items-center gap-1 text-xs dark:text-gray-500 text-gray-400 cursor-pointer select-none">
+            <input type="checkbox" checked={slot.transformPrompt}
+              onChange={() => updateSlot(slot.id, { transformPrompt: !slot.transformPrompt })}
+              className="rounded dark:bg-gray-800 bg-amber-50 border dark:border-gray-700 border-amber-200" />
+            {t("app.transform_prompt")}
+          </label>
           <button
             onClick={() => removeSlot(slot.id)}
             className="text-red-400 hover:text-red-300 text-sm transition-colors"
@@ -251,7 +259,7 @@ function App() {
             rateLimitInfo={slot.genDebug?.rateLimitInfo}
           />
 
-          <ChatInput onSend={(p) => handleSend(slot.id, p)} loading={slot.loading} />
+          <ChatInput onSend={(p) => handleSend(slot.id, p)} loading={slot.loading} initialPrompt={slot.lastPrompt} />
         </div>
       )}
 
@@ -337,7 +345,7 @@ function App() {
             </div>
           ) : (
             <>
-              {slots.map(renderSlot)}
+              {slots.map((s, i) => renderSlot(s, i))}
 
               <button
                 onClick={() => addSlot()}

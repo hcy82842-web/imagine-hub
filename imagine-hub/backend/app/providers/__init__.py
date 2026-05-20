@@ -3,12 +3,14 @@ from .openai_compat import OpenAICompatProvider
 from .sd_webui import SDWebUIProvider
 from .custom import CustomProvider
 from .replicate_provider import ReplicateProvider
+from .modelslab import ModelsLabProvider
 
 PROVIDER_MAP: dict[str, type[BaseProvider]] = {
     "openai_compat": OpenAICompatProvider,
     "sd_webui": SDWebUIProvider,
     "custom": CustomProvider,
     "replicate": ReplicateProvider,
+    "modelslab": ModelsLabProvider,
 }
 
 PARAM_SCHEMAS: dict[str, list[dict]] = {
@@ -41,6 +43,14 @@ PARAM_SCHEMAS: dict[str, list[dict]] = {
         {"key": "steps", "label": "Steps", "type": "number", "default": 25, "min": 1, "max": 50},
         {"key": "guidance_scale", "label": "Guidance Scale", "type": "number", "default": 7.5, "min": 1, "max": 20, "step": 0.5},
         {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1},
+    ],
+    "modelslab": [
+        {"key": "negative_prompt", "label": "Negative Prompt", "type": "text", "default": ""},
+        {"key": "width", "label": "Width", "type": "number", "default": 1024, "min": 256, "max": 1536, "step": 64},
+        {"key": "height", "label": "Height", "type": "number", "default": 1024, "min": 256, "max": 1536, "step": 64},
+        {"key": "num_inference_steps", "label": "Steps", "type": "number", "default": 30, "min": 1, "max": 50},
+        {"key": "guidance_scale", "label": "Guidance Scale", "type": "number", "default": 7.5, "min": 1, "max": 20, "step": 0.5},
+        {"key": "samples", "label": "Number of images", "type": "number", "default": 1, "min": 1, "max": 4},
     ],
     "custom": [
         {"key": "endpoint", "label": "Full Endpoint URL", "type": "text", "default": ""},
@@ -76,6 +86,8 @@ def get_provider(provider_type: str, base_url: str, api_key: str, config: str = 
     cls = PROVIDER_MAP.get(provider_type)
     if not cls:
         raise ValueError(f"Unknown provider type: {provider_type}")
+    if provider_type == "modelslab":
+        return cls(base_url=base_url, api_key=api_key, config=config)
     return cls(base_url=base_url, api_key=api_key)
 
 def get_param_schema(provider_type: str) -> list[dict]:

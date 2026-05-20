@@ -6,23 +6,14 @@ import {
   deleteProvider,
   fetchModels,
   ProviderData,
+  testTransformerApi,
 } from "../api/client";
 import { useLang } from "../contexts/LanguageContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { parseCurl, CurlParseResult } from "../utils/curlParser";
 import { testConnection, TestResult } from "../api/client";
 import { getFieldDescription } from "../i18n/fieldDescriptions";
-
-const IMAGE_MODEL_KEYWORDS = [
-  "flux", "sd", "stable-diffusion", "kolors", "dall-e", "dalle",
-  "playground", "recraft", "pixart", "latent", "deepfloyd",
-  "wukong", "cogview", "image", "sdxl", "turbo",
-];
-
-function isImageModel(id: string): boolean {
-  const lower = id.toLowerCase();
-  return IMAGE_MODEL_KEYWORDS.some((kw) => lower.includes(kw));
-}
+import ModelPicker from "./ModelPicker";
 
 interface AliasRow {
   modelId: string;
@@ -88,10 +79,47 @@ const defaultCustomCustom: CustomConfigFields = {
   max_polls: 150,
 };
 
+interface TransformerCfg {
+  enabled: boolean;
+  base_url: string;
+  api_key: string;
+  model: string;
+  system_prompt: string;
+}
+
+const DEFAULT_TRANSFORM_PROMPT =
+  "You are an AI prompt transformation assistant for image generation. " +
+  "The user provides a description (typically in Chinese). " +
+  "Your job is to transform it into an optimized English prompt " +
+  "for the target image generation model, and generate a complementary negative prompt.\n\n" +
+  "Target model: {{model_id}}\n\n" +
+  "Output ONLY valid JSON with exactly two fields:\n" +
+  '1. "prompt": A detailed English prompt optimized for {{model_id}} ' +
+  "(include subject, style, lighting, composition, quality keywords)\n" +
+  '2. "negative_prompt": A comprehensive negative prompt addressing ' +
+  "common weaknesses of {{model_id}} (artifacts, anatomy issues, quality defects)\n\n" +
+  "Consider:\n" +
+  "- What does {{model_id}} excel at? Emphasize those aspects.\n" +
+  "- What are {{model_id}}'s weaknesses? Cover them in negative_prompt.\n\n" +
+  "Example:\n" +
+  '{"prompt": "A majestic dragon soaring above a neon-lit cyberpunk city, ' +
+  "cinematic lighting, volumetric fog, 8K, intricate detail\",\n" +
+  '"negative_prompt": "blurry, low quality, distorted hands, bad anatomy, ' +
+  'extra limbs, watermark, text, signature"}\n\n' +
+  "Do not include any text before or after the JSON.";
+
+const defaultTransformer: TransformerCfg = {
+  enabled: false,
+  base_url: "https://api.deepseek.com/v1",
+  api_key: "",
+  model: "deepseek-chat",
+  system_prompt: DEFAULT_TRANSFORM_PROMPT,
+};
+
 function parseCustomConfig(configStr: string): CustomConfigFields {
   try {
     const cfg = JSON.parse(configStr);
-    const { model_aliases: _, ...rest } = cfg;
+    const { model_aliases: _, prompt_transformer: __, ...rest } = cfg;
     return {
       endpoint: rest.endpoint || "",
       method: rest.method || "POST",
@@ -115,6 +143,22 @@ function parseCustomConfig(configStr: string): CustomConfigFields {
     };
   } catch {
     return { ...defaultCustomCustom };
+  }
+}
+
+function parseTransformer(configStr: string): TransformerCfg {
+  try {
+    const cfg = JSON.parse(configStr);
+    const tc = cfg.prompt_transformer || {};
+    return {
+      enabled: !!tc.enabled,
+      base_url: tc.base_url ?? defaultTransformer.base_url,
+      api_key: tc.api_key ?? "",
+      model: tc.model ?? defaultTransformer.model,
+      system_prompt: tc.system_prompt ?? "",
+    };
+  } catch {
+    return { ...defaultTransformer };
   }
 }
 
@@ -200,6 +244,8 @@ export default function Settings({ onProvidersChange }: Props) {
   const [error, setError] = useState("");
   const [aliasRows, setAliasRows] = useState<AliasRow[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
   const [curlInput, setCurlInput] = useState("");
   const [parseError, setParseError] = useState("");
   const [parseResult, setParseResult] = useState<CurlParseResult | null>(null);
@@ -213,11 +259,13 @@ export default function Settings({ onProvidersChange }: Props) {
   const [defaultSize, setDefaultSize] = useState(() => localStorage.getItem("imagine_default_size") || "1920x1080");
   const [defaultQuality, setDefaultQuality] = useState(() => localStorage.getItem("imagine_default_quality") || "hd");
   const [defaultN, setDefaultN] = useState(() => parseInt(localStorage.getItem("imagine_default_n") || "1"));
+  const [transformerCfg, setTransformerCfg] = useState<TransformerCfg>({ ...defaultTransformer });
 
   const getProviderTypes = () => [
     { value: "openai_compat", label: t("type.openai_compat") },
     { value: "sd_webui", label: t("type.sd_webui") },
     { value: "replicate", label: t("type.replicate") },
+    { value: "modelslab", label: t("type.modelslab") },
     { value: "custom", label: t("type.custom") },
   ];
 
@@ -226,6 +274,14 @@ export default function Settings({ onProvidersChange }: Props) {
     { label: "Together AI", desc: t("quick.togetherai"), fill: { name: "Together AI", provider_type: "openai_compat" as const, base_url: "https://api.together.xyz/v1" } },
     { label: "Fireworks AI", desc: t("quick.fireworks"), fill: { name: "Fireworks AI", provider_type: "openai_compat" as const, base_url: "https://api.fireworks.ai/inference/v1" } },
     { label: "DeepSeek", desc: t("quick.deepseek"), fill: { name: "DeepSeek", provider_type: "openai_compat" as const, base_url: "https://api.deepseek.com/v1" } },
+    {
+      label: "ModelsLab", desc: t("quick.modelslab"),
+      fill: {
+        name: "ModelsLab", provider_type: "modelslab" as const,
+        base_url: "https://modelslab.com",
+        config: "{}",
+      },
+    },
   ];
 
   const handleTestConnection = async () => {
@@ -289,6 +345,7 @@ export default function Settings({ onProvidersChange }: Props) {
     }
     setEditingId(null);
     setAliasRows([]);
+    setTransformerCfg({ ...defaultTransformer });
   };
 
   const loadProviders = async () => {
@@ -336,6 +393,15 @@ export default function Settings({ onProvidersChange }: Props) {
       finalConfig = JSON.stringify(cfg);
     }
     try {
+      const j = JSON.parse(finalConfig);
+      if (transformerCfg.enabled) {
+        j.prompt_transformer = { ...transformerCfg };
+      } else {
+        delete j.prompt_transformer;
+      }
+      finalConfig = JSON.stringify(j);
+    } catch { /* ignore */ }
+    try {
       if (editingId) {
         await updateProvider(editingId, { ...form, config: finalConfig });
       } else {
@@ -345,6 +411,7 @@ export default function Settings({ onProvidersChange }: Props) {
       setCustomCfg(defaultCustomCustom);
       setAliasRows([]);
       setEditingId(null);
+      setTransformerCfg({ ...defaultTransformer });
       loadProviders();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Operation failed";
@@ -365,6 +432,7 @@ export default function Settings({ onProvidersChange }: Props) {
     }
     setEditingId(p.id);
     setAliasRows(parseAliases(p.config));
+    setTransformerCfg(parseTransformer(p.config));
     setError("");
   };
 
@@ -384,33 +452,46 @@ export default function Settings({ onProvidersChange }: Props) {
     setAliasRows([]);
     setEditingId(null);
     setError("");
+    setTransformerCfg({ ...defaultTransformer });
   };
 
   const applyTemplate = (tpl: ReturnType<typeof getQuickTemplates>[number]) => {
-    setForm({ ...emptyForm, ...tpl.fill });
-    setCustomCfg(defaultCustomCustom);
+    const newForm = { ...emptyForm, ...tpl.fill };
+    setForm(newForm);
+    if ((newForm.provider_type as string) === "custom" && newForm.config && newForm.config !== "{}") {
+      setCustomCfg(parseCustomConfig(newForm.config));
+    } else {
+      setCustomCfg(defaultCustomCustom);
+    }
     setAliasRows([]);
     setEditingId(null);
     setError("");
+    setTransformerCfg({ ...defaultTransformer });
   };
 
-  const handleFetchModels = async () => {
+  const handleBrowseModels = async () => {
     if (!editingId) return;
     setFetching(true);
     try {
       const models = await fetchModels(editingId);
-      const filtered = models.filter(isImageModel);
-      const merged = new Map<string, AliasRow>();
-      for (const r of aliasRows) merged.set(r.modelId, r);
-      for (const m of filtered) {
-        if (!merged.has(m)) merged.set(m, { modelId: m, displayName: m, fetched: true });
-      }
-      setAliasRows(Array.from(merged.values()));
+      setFetchedModels(models);
+      setModelPickerOpen(true);
     } catch {
       setError(t("settings.fetch_failed"));
     } finally {
       setFetching(false);
     }
+  };
+
+  const onAddModels = (selectedIds: string[]) => {
+    setAliasRows((prev) => {
+      const merged = new Map<string, AliasRow>();
+      for (const r of prev) merged.set(r.modelId, r);
+      for (const m of selectedIds) {
+        if (!merged.has(m)) merged.set(m, { modelId: m, displayName: m, fetched: true });
+      }
+      return Array.from(merged.values());
+    });
   };
 
   const addManualRow = () => {
@@ -427,6 +508,35 @@ export default function Settings({ onProvidersChange }: Props) {
 
   const removeAliasRow = (index: number) => {
     setAliasRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateTransformerField = <K extends keyof TransformerCfg>(key: K, value: TransformerCfg[K]) => {
+    setTransformerCfg((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const resetTransformerPrompt = () => {
+    setTransformerCfg((prev) => ({ ...prev, system_prompt: DEFAULT_TRANSFORM_PROMPT }));
+  };
+
+  const [testingTransformer, setTestingTransformer] = useState(false);
+  const [transformerTestResult, setTransformerTestResult] = useState<{ success: boolean; ms?: number; error?: string } | null>(null);
+
+  const handleTestTransformer = async () => {
+    setTestingTransformer(true);
+    setTransformerTestResult(null);
+    try {
+      const res = await testTransformerApi({
+        base_url: transformerCfg.base_url,
+        api_key: transformerCfg.api_key,
+        model: transformerCfg.model,
+      });
+      setTransformerTestResult({ success: true, ms: res.ms });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Connection failed";
+      setTransformerTestResult({ success: false, error: msg });
+    } finally {
+      setTestingTransformer(false);
+    }
   };
 
   const inpCls = "w-full dark:bg-gray-800 bg-amber-50 rounded px-3 py-2 dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors";
@@ -787,9 +897,9 @@ export default function Settings({ onProvidersChange }: Props) {
               <label className="text-sm font-semibold dark:text-gray-300 text-gray-600">{t("settings.model_aliases")}</label>
               {editingId && (
                 <div className="flex gap-2">
-                  <button type="button" onClick={handleFetchModels} disabled={fetching}
+                  <button type="button" onClick={handleBrowseModels} disabled={fetching}
                     className="text-xs dark:bg-gray-700 bg-amber-100 dark:hover:bg-gray-600 hover:bg-amber-200 dark:text-gray-200 text-gray-700 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors">
-                    {fetching ? t("settings.fetching") : t("settings.fetch_models")}
+                    {fetching ? t("settings.fetching") : t("settings.browse_models")}
                   </button>
                   <button type="button" onClick={addManualRow}
                     className="text-xs bg-blue-600/20 hover:bg-blue-600/30 text-blue-500 px-3 py-1.5 rounded-lg transition-colors">
@@ -822,6 +932,55 @@ export default function Settings({ onProvidersChange }: Props) {
             )}
           </div>
         )}
+
+        <div className="border-t dark:border-gray-800 border-amber-200 pt-4 mt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <input type="checkbox" id="transformer-enable" className="rounded dark:bg-gray-800 bg-amber-50 border dark:border-gray-700 border-amber-200"
+              checked={transformerCfg.enabled} onChange={(e) => updateTransformerField("enabled", e.target.checked)} />
+            <label htmlFor="transformer-enable" className="text-sm font-semibold dark:text-gray-300 text-gray-600 cursor-pointer">{t("settings.prompt_transformer")}</label>
+            <HelpTip fieldKey="prompt_transformer" />
+          </div>
+          {transformerCfg.enabled && (
+            <div className="ml-2 pl-4 border-l-2 dark:border-blue-500/30 border-blue-300/50 space-y-3 animate-slide-up">
+              <p className="text-xs dark:text-gray-500 text-gray-400">{t("settings.transformer_hint")}</p>
+              <div>
+                <label className={lblCls}>{t("settings.transformer_base_url")}</label>
+                <input className={inpCls} value={transformerCfg.base_url} onChange={(e) => updateTransformerField("base_url", e.target.value)} placeholder="https://api.deepseek.com/v1" />
+              </div>
+              <div>
+                <label className={lblCls}>{t("settings.transformer_api_key")}</label>
+                <input className={inpCls} value={transformerCfg.api_key} onChange={(e) => updateTransformerField("api_key", e.target.value)} placeholder="sk-..." type="password" />
+              </div>
+              <div>
+                <label className={lblCls}>{t("settings.transformer_model")}</label>
+                <input className={inpCls} value={transformerCfg.model} onChange={(e) => updateTransformerField("model", e.target.value)} placeholder="deepseek-chat" />
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={handleTestTransformer} disabled={testingTransformer || !transformerCfg.base_url}
+                  className="text-xs dark:bg-gray-700 bg-amber-100 dark:hover:bg-gray-600 hover:bg-amber-200 dark:text-gray-200 text-gray-700 disabled:opacity-40 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+                  {testingTransformer ? <><span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-gray-200 rounded-full animate-spin" /> {t("test.testing")}</> : t("settings.transformer_test")}
+                </button>
+                {transformerTestResult && (
+                  <span className={`text-xs ${transformerTestResult.success ? "text-green-500" : "text-red-400"}`}>
+                    {transformerTestResult.success
+                      ? `\u2713 ${t("test.ok")} (${transformerTestResult.ms}ms)`
+                      : `\u2717 ${transformerTestResult.error}`}
+                  </span>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={lblCls + " mb-0"}>{t("settings.transformer_system_prompt")}</label>
+                  <button type="button" onClick={resetTransformerPrompt} className="text-[10px] dark:text-gray-500 text-gray-400 hover:text-blue-400 transition-colors">{t("settings.transformer_restore_default")}</button>
+                </div>
+                <textarea className={inpCls + " font-mono text-xs"} rows={6}
+                  value={transformerCfg.system_prompt}
+                  onChange={(e) => updateTransformerField("system_prompt", e.target.value)}
+                  placeholder={t("settings.transformer_system_prompt")} />
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex gap-3 pt-2 flex-wrap">
           <button type="submit" className="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-lg font-medium text-white transition-all">
@@ -876,6 +1035,14 @@ export default function Settings({ onProvidersChange }: Props) {
           </div>
         ))}
       </div>
+
+      <ModelPicker
+        isOpen={modelPickerOpen}
+        onClose={() => setModelPickerOpen(false)}
+        models={fetchedModels}
+        existingIds={aliasRows.map((r) => r.modelId)}
+        onAdd={onAddModels}
+      />
 
     </div>
   );
