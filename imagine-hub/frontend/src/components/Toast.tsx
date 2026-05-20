@@ -34,17 +34,18 @@ export default function ToastContainer() {
   if (items.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
       {items.map((item) => (
         <div
           key={item.id}
-          className={`px-4 py-2 rounded-lg shadow-lg text-sm max-w-sm ${
+          className="animate-toast-in pointer-events-auto px-4 py-3 rounded-xl shadow-2xl text-sm max-w-sm backdrop-blur-md border"
+          style={
             item.type === "error"
-              ? "bg-red-900/90 text-red-100 border border-red-700"
+              ? { background: "rgba(127,29,29,0.9)", borderColor: "rgba(220,38,38,0.5)", color: "#fecaca" }
               : item.type === "success"
-                ? "bg-green-900/90 text-green-100 border border-green-700"
-                : "bg-blue-900/90 text-blue-100 border border-blue-700"
-          }`}
+                ? { background: "rgba(22,101,52,0.9)", borderColor: "rgba(34,197,94,0.5)", color: "#bbf7d0" }
+                : { background: "rgba(30,64,175,0.9)", borderColor: "rgba(59,130,246,0.5)", color: "#bfdbfe" }
+          }
         >
           {item.message}
         </div>

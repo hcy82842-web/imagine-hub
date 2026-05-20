@@ -2,11 +2,13 @@ from .base import BaseProvider, ImageResult
 from .openai_compat import OpenAICompatProvider
 from .sd_webui import SDWebUIProvider
 from .custom import CustomProvider
+from .replicate_provider import ReplicateProvider
 
 PROVIDER_MAP: dict[str, type[BaseProvider]] = {
     "openai_compat": OpenAICompatProvider,
     "sd_webui": SDWebUIProvider,
     "custom": CustomProvider,
+    "replicate": ReplicateProvider,
 }
 
 PARAM_SCHEMAS: dict[str, list[dict]] = {
@@ -26,6 +28,13 @@ PARAM_SCHEMAS: dict[str, list[dict]] = {
          "options": ["Euler a", "Euler", "DPM++ 2M Karras", "DPM++ 2S a Karras",
                      "DDIM", "UniPC", "LMS", "Heun"]},
         {"key": "negative_prompt", "label": "Negative Prompt", "type": "text", "default": ""},
+    ],
+    "replicate": [
+        {"key": "size", "label": "Aspect Ratio", "type": "select", "default": "1024x1024",
+         "options": ["1024x1024", "1360x768", "768x1360", "1536x640", "640x1536"]},
+        {"key": "steps", "label": "Steps", "type": "number", "default": 25, "min": 1, "max": 50},
+        {"key": "guidance_scale", "label": "Guidance Scale", "type": "number", "default": 7.5, "min": 1, "max": 20, "step": 0.5},
+        {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1, "max": 4},
     ],
     "custom": [
         {"key": "endpoint", "label": "Full Endpoint URL", "type": "text", "default": ""},

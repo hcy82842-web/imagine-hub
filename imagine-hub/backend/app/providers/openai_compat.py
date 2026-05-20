@@ -34,7 +34,8 @@ class OpenAICompatProvider(BaseProvider):
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
-                url = data["data"][0]["url"]
+                images = data.get("data") or data.get("images", [])
+                url = images[0]["url"]
                 async with session.get(url) as img_resp:
                     img_resp.raise_for_status()
                     img_bytes = await img_resp.read()

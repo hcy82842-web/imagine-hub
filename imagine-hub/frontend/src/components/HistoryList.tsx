@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listHistory, deleteHistory, HistoryItem } from "../api/client";
+import { showToast } from "./Toast";
 
 export default function HistoryList({ onRefresh }: { onRefresh?: () => void }) {
   const [items, setItems] = useState<HistoryItem[]>([]);
@@ -17,24 +18,31 @@ export default function HistoryList({ onRefresh }: { onRefresh?: () => void }) {
   }, []);
 
   const handleDelete = async (id: number) => {
-    await deleteHistory(id);
-    load();
-    onRefresh?.();
+    try {
+      await deleteHistory(id);
+      load();
+      onRefresh?.();
+    } catch {
+      showToast("Failed to delete", "error");
+    }
   };
 
   if (items.length === 0) {
-    return <p className="text-gray-500 text-center py-8">No history yet.</p>;
+    return <p className="text-gray-500 text-center py-12">No history yet.</p>;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="bg-gray-900 rounded-lg p-4 flex gap-4">
+        <div
+          key={item.id}
+          className="group bg-gray-900/50 border border-gray-800 hover:border-gray-700 rounded-xl p-4 flex gap-4 transition-all"
+        >
           {item.image_base64 && (
             <img
               src={`data:image/png;base64,${item.image_base64}`}
               alt=""
-              className="w-24 h-24 object-cover rounded flex-shrink-0"
+              className="w-20 h-20 object-cover rounded-lg flex-shrink-0 transition-transform group-hover:scale-105"
             />
           )}
           <div className="flex-1 min-w-0">
@@ -46,7 +54,7 @@ export default function HistoryList({ onRefresh }: { onRefresh?: () => void }) {
           </div>
           <button
             onClick={() => handleDelete(item.id)}
-            className="text-red-400 hover:text-red-300 text-sm self-start"
+            className="text-red-400/60 hover:text-red-300 text-sm self-start transition-colors opacity-0 group-hover:opacity-100"
           >
             Delete
           </button>

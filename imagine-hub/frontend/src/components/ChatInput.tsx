@@ -16,10 +16,12 @@ export default function ChatInput({ onSend, loading }: Props) {
     }
   };
 
+  const canSend = prompt.trim().length > 0 && !loading;
+
   return (
     <form onSubmit={handleSubmit} className="flex gap-3">
       <input
-        className="flex-1 bg-gray-800 rounded-lg px-4 py-3 text-gray-100 border border-gray-700 focus:border-blue-500 outline-none"
+        className="flex-1 bg-gray-800/80 rounded-xl px-5 py-3.5 text-sm text-gray-100 border border-gray-700 focus:border-blue-500/70 outline-none transition-all placeholder:text-gray-600"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe the image you want to generate..."
@@ -27,10 +29,20 @@ export default function ChatInput({ onSend, loading }: Props) {
       />
       <button
         type="submit"
-        disabled={loading || !prompt.trim()}
-        className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 px-6 py-3 rounded-lg font-medium"
+        disabled={!canSend}
+        className={`relative px-8 py-3.5 rounded-xl font-medium text-sm transition-all ${
+          canSend
+            ? "bg-blue-600 hover:bg-blue-500 text-white animate-pulse-ring"
+            : "bg-gray-800 text-gray-500 cursor-not-allowed"
+        }`}
       >
-        {loading ? "..." : "Generate"}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          </span>
+        ) : (
+          "Generate"
+        )}
       </button>
     </form>
   );

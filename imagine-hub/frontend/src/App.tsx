@@ -64,40 +64,47 @@ function App() {
     }
   };
 
+  const navItems: { key: Page; label: string }[] = [
+    { key: "home", label: "Home" },
+    { key: "history", label: "History" },
+    { key: "settings", label: "Settings" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col">
-      <nav className="border-b border-gray-800 px-6 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Imagine Hub</h1>
-        <div className="flex gap-4 text-sm">
-          <button
-            onClick={() => setPage("home")}
-            className={page === "home" ? "text-blue-400" : "text-gray-400 hover:text-gray-200"}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => setPage("history")}
-            className={page === "history" ? "text-blue-400" : "text-gray-400 hover:text-gray-200"}
-          >
-            History
-          </button>
-          <button
-            onClick={() => setPage("settings")}
-            className={page === "settings" ? "text-blue-400" : "text-gray-400 hover:text-gray-200"}
-          >
-            Settings
-          </button>
+      <nav className="glass sticky top-0 z-40 border-b border-gray-800/50 px-6 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold tracking-tight">
+          <span className="text-blue-400">Imagine</span> Hub
+        </h1>
+        <div className="flex gap-1">
+          {navItems.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setPage(key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                page === key
+                  ? "bg-blue-600/20 text-blue-300"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </nav>
 
       {page === "home" && (
-        <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-6 gap-6">
+        <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-6 gap-6 animate-slide-up">
           {providers.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <h2 className="text-2xl font-bold mb-2">Welcome to Imagine Hub</h2>
                 <p className="text-gray-400">
-                  Go to <button onClick={() => setPage("settings")} className="text-blue-400 underline">Settings</button> to add your first provider.
+                  Go to{" "}
+                  <button onClick={() => setPage("settings")} className="text-blue-400 underline hover:text-blue-300 transition-colors">
+                    Settings
+                  </button>{" "}
+                  to add your first provider.
                 </p>
               </div>
             </div>
@@ -126,14 +133,16 @@ function App() {
       )}
 
       {page === "history" && (
-        <div className="flex-1 max-w-3xl mx-auto w-full p-6">
+        <div className="flex-1 max-w-3xl mx-auto w-full p-6 animate-slide-up">
           <h2 className="text-2xl font-bold mb-6">Generation History</h2>
           <HistoryList key={historyKey} />
         </div>
       )}
 
       {page === "settings" && (
-        <Settings onProvidersChange={loadProviders} />
+        <div className="animate-slide-up">
+          <Settings onProvidersChange={loadProviders} />
+        </div>
       )}
 
       <ToastContainer />
