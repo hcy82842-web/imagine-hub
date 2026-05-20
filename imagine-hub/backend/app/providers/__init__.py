@@ -14,7 +14,12 @@ PROVIDER_MAP: dict[str, type[BaseProvider]] = {
 PARAM_SCHEMAS: dict[str, list[dict]] = {
     "openai_compat": [
         {"key": "size", "label": "Size", "type": "select", "default": "1024x1024",
-         "options": ["256x256", "512x512", "1024x1024", "1024x1792", "1792x1024"]},
+         "options": [
+             "256x256", "512x512", "768x768", "1024x1024", "1536x1536",
+             "768x1024", "768x1360", "1024x1360", "1024x1792",
+             "1024x768", "1360x768", "1360x1024", "1792x1024",
+             "1536x640", "1920x1080",
+         ]},
         {"key": "quality", "label": "Quality", "type": "select", "default": "standard",
          "options": ["standard", "hd"]},
         {"key": "n", "label": "Number of images", "type": "number", "default": 1, "min": 1, "max": 10},

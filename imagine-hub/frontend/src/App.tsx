@@ -21,6 +21,10 @@ function App() {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState("image/png");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lastPrompt, setLastPrompt] = useState("");
+  const [restorePrompt, setRestorePrompt] = useState("");
+  const [restoreKey, setRestoreKey] = useState(0);
   const [historyKey, setHistoryKey] = useState(0);
   const [lanUrl, setLanUrl] = useState("");
 
@@ -44,10 +48,28 @@ function App() {
     loadProviders();
   }, []);
 
+  function translateError(detail: string): string | null {
+    const patterns: [RegExp, string][] = [
+      [/not found on provider/i, "error.model_not_found"],
+      [/Authentication failed/i, "error.auth_failed"],
+      [/timed out/i, "error.timeout"],
+      [/Rate limited/i, "error.rate_limited"],
+      [/Connection error/i, "error.connection_failed"],
+      [/Access denied/i, "error.access_denied"],
+      [/endpoint is required|endpoint could not be determined/i, "error.invalid_params"],
+    ];
+    for (const [regex, key] of patterns) {
+      if (regex.test(detail)) return t(key);
+    }
+    return null;
+  }
+
   const handleSend = async (prompt: string) => {
     if (!selectedProvider) return;
+    setLastPrompt(prompt);
     setLoading(true);
     setImageBase64(null);
+    setErrorMsg(null);
     try {
       const result = await generateImage({
         provider_id: selectedProvider.id,
@@ -60,11 +82,20 @@ function App() {
       setHistoryKey((k) => k + 1);
     } catch (err: unknown) {
       setImageBase64(null);
-      const msg =
+      const detail =
         err && typeof err === "object" && "response" in err
-          ? (err as { response: { data: { detail?: string } } }).response?.data?.detail ||
-            "Generation failed"
-          : "Generation failed";
+          ? (err as { response: { data: { detail?: string } } }).response?.data?.detail
+          : null;
+      let msg: string;
+      if (detail) {
+        const translated = translateError(detail);
+        msg = translated
+          ? `${t("toast.generate_failed")}：${translated}`
+          : `${t("toast.generate_failed")}：${detail}`;
+      } else {
+        msg = t("toast.generate_failed");
+      }
+      setErrorMsg(msg);
       showToast(msg, "error");
     } finally {
       setLoading(false);
@@ -139,7 +170,7 @@ function App() {
                 onSelectModel={setSelectedModel}
               />
 
-              <ImageDisplay imageBase64={imageBase64} mediaType={mediaType} loading={loading} />
+              <ImageDisplay imageBase64={imageBase64} mediaType={mediaType} loading={loading} error={errorMsg} onClearError={() => setErrorMsg(null)} modelName={selectedModel} prompt={lastPrompt} />
 
               <ParamPanel
                 providerType={selectedProvider?.provider_type ?? ""}
@@ -147,7 +178,7 @@ function App() {
                 onChange={setGenParams}
               />
 
-              <ChatInput onSend={handleSend} loading={loading} />
+              <ChatInput key={restoreKey} onSend={handleSend} loading={loading} initialPrompt={restorePrompt} />
             </>
           )}
         </div>
@@ -156,7 +187,7 @@ function App() {
       {page === "history" && (
         <div className="flex-1 max-w-3xl mx-auto w-full p-6 animate-slide-up">
           <h2 className="text-2xl font-bold mb-6 dark:text-gray-100 text-gray-800">{t("history.title")}</h2>
-          <HistoryList key={historyKey} />
+          <HistoryList key={historyKey} onUsePrompt={(p) => { setRestorePrompt(p); setRestoreKey((k) => k + 1); setPage("home"); }} />
         </div>
       )}
 

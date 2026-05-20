@@ -1,5 +1,6 @@
 import base64
 import json
+import aiohttp
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from sqlmodel import Session
@@ -22,7 +23,26 @@ async def generate_image(req: GenerateRequest):
     provider = get_provider(
         provider_cfg.provider_type, provider_cfg.base_url, provider_cfg.api_key, provider_cfg.config
     )
-    result = await provider.generate(req.prompt, req.model, req.params)
+
+    try:
+        result = await provider.generate(req.prompt, req.model, req.params)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except TimeoutError:
+        raise HTTPException(status_code=408, detail="Request timed out")
+    except aiohttp.ClientResponseError as e:
+        status = e.status
+        msg = {
+            401: "Authentication failed: invalid or expired API key",
+            403: "Access denied by provider",
+            404: f"Model '{req.model}' not found on provider",
+            429: "Rate limited, please try again later",
+        }.get(status, f"Provider returned HTTP {status}: {e.message}")
+        raise HTTPException(status_code=502, detail=msg)
+    except aiohttp.ClientError as e:
+        raise HTTPException(status_code=502, detail=f"Connection error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     img_path = save_image(result.image_data)
 

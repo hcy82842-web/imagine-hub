@@ -19,6 +19,32 @@ interface Props {
   onChange: (params: Record<string, unknown>) => void;
 }
 
+function optionLabel(fieldKey: string, value: string, t: (key: string) => string): string {
+  const key = `param_option_${fieldKey}_${value}`;
+  const label = t(key);
+  return label !== key ? label : value;
+}
+
+function fieldLabel(fieldKey: string, defaultLabel: string, t: (key: string) => string): string {
+  const key = `param_label_${fieldKey}`;
+  const label = t(key);
+  return label !== key ? label : defaultLabel;
+}
+
+function HelpTip({ descKey }: { descKey: string }) {
+  const { t } = useLang();
+  const desc = t(descKey);
+  if (!desc || desc === descKey) return null;
+  return (
+    <span className="group relative inline-flex ml-1.5 cursor-help align-middle">
+      <span className="dark:text-gray-500 text-gray-400 text-xs leading-none">&#9432;</span>
+      <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 rounded-lg text-xs leading-relaxed dark:bg-gray-700 bg-white dark:text-gray-200 text-gray-700 shadow-lg border dark:border-gray-600 border-amber-200 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none min-w-[200px] max-w-xs whitespace-normal">
+        {desc}
+      </div>
+    </span>
+  );
+}
+
 export default function ParamPanel({ providerType, params, onChange }: Props) {
   const { t } = useLang();
   const [schema, setSchema] = useState<SchemaField[]>([]);
@@ -75,7 +101,10 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
         <div className="mt-4 grid grid-cols-2 gap-4">
           {schema.map((field) => (
             <div key={field.key}>
-              <label className="block text-xs dark:text-gray-400 text-gray-500 mb-1">{field.label}</label>
+              <label className="block text-xs dark:text-gray-400 text-gray-500 mb-1">
+                {fieldLabel(field.key, field.label, t)}
+                {field.key === "quality" && <HelpTip descKey="param_desc_quality" />}
+              </label>
               {field.type === "select" && field.options ? (
                 <select
                   className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors"
@@ -83,7 +112,7 @@ export default function ParamPanel({ providerType, params, onChange }: Props) {
                   onChange={(e) => update(field.key, e.target.value)}
                 >
                   {field.options.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
+                    <option key={opt} value={opt}>{optionLabel(field.key, opt, t)}</option>
                   ))}
                 </select>
               ) : field.type === "number" ? (

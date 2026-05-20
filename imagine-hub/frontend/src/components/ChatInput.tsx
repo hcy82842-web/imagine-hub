@@ -4,11 +4,12 @@ import { useLang } from "../contexts/LanguageContext";
 interface Props {
   onSend: (prompt: string) => void;
   loading: boolean;
+  initialPrompt?: string;
 }
 
-export default function ChatInput({ onSend, loading }: Props) {
+export default function ChatInput({ onSend, loading, initialPrompt = "" }: Props) {
   const { t } = useLang();
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
