@@ -10,6 +10,7 @@ interface Props {
 export default function ChatInput({ onSend, loading, initialPrompt = "" }: Props) {
   const { t } = useLang();
   const [prompt, setPrompt] = useState(initialPrompt);
+  const [hasDefaultPrompt] = useState(() => !!localStorage.getItem("imagine_default_prompt"));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,11 @@ export default function ChatInput({ onSend, loading, initialPrompt = "" }: Props
   const canSend = prompt.trim().length > 0 && !loading;
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-3">
+    <>
+      {hasDefaultPrompt && (
+        <div className="text-xs dark:text-gray-500 text-gray-400 mb-1">{t("chat.default_prompt_active")}</div>
+      )}
+      <form onSubmit={handleSubmit} className="flex gap-3">
       <input
         className="flex-1 dark:bg-gray-800/80 bg-white/80 rounded-xl px-5 py-3.5 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500/70 outline-none transition-all dark:placeholder:text-gray-600 placeholder:text-gray-400"
         value={prompt}
@@ -48,5 +53,6 @@ export default function ChatInput({ onSend, loading, initialPrompt = "" }: Props
         )}
       </button>
     </form>
+    </>
   );
 }

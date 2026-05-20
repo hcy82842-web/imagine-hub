@@ -99,6 +99,10 @@ const zh: Record<string, string> = {
   "preferences.dark": "暗色",
   "preferences.light": "暖白",
   "preferences.system": "跟随系统",
+  "preferences.default_prompt": "默认风格指令",
+  "preferences.default_prompt_hint": "所有生成都会自动附加此内容到提示词前面，无需重复输入。",
+  "preferences.default_prompt_placeholder": "例如：masterpiece, best quality, 8K, cinematic lighting",
+  "preferences.show_prefix_in_history": "历史记录中显示完整提示词（含前缀）",
 
   "model.select_provider": "选择提供商",
   "model.placeholder": "输入模型 ID",
@@ -142,6 +146,7 @@ const zh: Record<string, string> = {
 
   "chat.placeholder": "描述你想要生成的图片...",
   "chat.generate": "生成",
+  "chat.default_prompt_active": "📎 默认风格已启用",
 
   "history.title": "生成历史",
   "history.empty": "暂无历史",

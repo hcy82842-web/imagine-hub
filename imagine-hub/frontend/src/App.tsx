@@ -66,7 +66,10 @@ function App() {
 
   const handleSend = async (prompt: string) => {
     if (!selectedProvider) return;
-    setLastPrompt(prompt);
+    const defaultPrompt = localStorage.getItem("imagine_default_prompt") || "";
+    const showPrefix = localStorage.getItem("imagine_show_prefix_in_history") !== "false";
+    const finalPrompt = defaultPrompt ? `${defaultPrompt}, ${prompt}` : prompt;
+    setLastPrompt(showPrefix ? finalPrompt : prompt);
     setLoading(true);
     setImageBase64(null);
     setErrorMsg(null);
@@ -74,7 +77,7 @@ function App() {
       const result = await generateImage({
         provider_id: selectedProvider.id,
         model: selectedModel,
-        prompt,
+        prompt: finalPrompt,
         params: genParams,
       });
       setImageBase64(result.image_base64);

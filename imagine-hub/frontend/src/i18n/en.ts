@@ -99,6 +99,10 @@ const en: Record<string, string> = {
   "preferences.dark": "Dark",
   "preferences.light": "Warm White",
   "preferences.system": "System",
+  "preferences.default_prompt": "Default Style Prompt",
+  "preferences.default_prompt_hint": "Automatically prepended to every generation prompt. No need to type it each time.",
+  "preferences.default_prompt_placeholder": "e.g. masterpiece, best quality, 8K, cinematic lighting",
+  "preferences.show_prefix_in_history": "Show full prompt (with prefix) in history",
 
   "model.select_provider": "Select Provider",
   "model.placeholder": "Enter model ID",
@@ -142,6 +146,7 @@ const en: Record<string, string> = {
 
   "chat.placeholder": "Describe the image you want to generate...",
   "chat.generate": "Generate",
+  "chat.default_prompt_active": "📎 Default style active",
 
   "history.title": "Generation History",
   "history.empty": "No history yet",

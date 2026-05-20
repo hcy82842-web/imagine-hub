@@ -207,6 +207,8 @@ export default function Settings({ onProvidersChange }: Props) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [customCfg, setCustomCfg] = useState<CustomConfigFields>(defaultCustomCustom);
+  const [defaultPrompt, setDefaultPrompt] = useState(() => localStorage.getItem("imagine_default_prompt") || "");
+  const [showPrefixInHistory, setShowPrefixInHistory] = useState(() => localStorage.getItem("imagine_show_prefix_in_history") !== "false");
 
   const getProviderTypes = () => [
     { value: "openai_compat", label: t("type.openai_compat") },
@@ -797,6 +799,31 @@ export default function Settings({ onProvidersChange }: Props) {
               ))}
             </div>
           </div>
+        </div>
+        <div className="mt-5 space-y-4 border-t dark:border-gray-800 border-amber-200 pt-5">
+          <div>
+            <label className="text-sm dark:text-gray-400 text-gray-500 mb-1.5 flex items-center gap-1">
+              {t("preferences.default_prompt")}
+              <HelpTip fieldKey="default_prompt" />
+            </label>
+            <textarea
+              className="w-full dark:bg-gray-800 bg-white rounded-lg px-3 py-2 text-sm dark:text-gray-100 text-gray-800 border dark:border-gray-700 border-amber-200 focus:border-blue-500 outline-none transition-colors font-mono"
+              rows={3}
+              value={defaultPrompt}
+              onChange={(e) => { setDefaultPrompt(e.target.value); localStorage.setItem("imagine_default_prompt", e.target.value); }}
+              placeholder={t("preferences.default_prompt_placeholder")}
+            />
+            <p className="text-[10px] dark:text-gray-500 text-gray-400 mt-1">{t("preferences.default_prompt_hint")}</p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="rounded dark:bg-gray-800 bg-amber-50 border dark:border-gray-700 border-amber-200"
+              checked={showPrefixInHistory}
+              onChange={(e) => { setShowPrefixInHistory(e.target.checked); localStorage.setItem("imagine_show_prefix_in_history", String(e.target.checked)); }}
+            />
+            <span className="text-sm dark:text-gray-300 text-gray-600">{t("preferences.show_prefix_in_history")}</span>
+          </label>
         </div>
       </div>
     </div>

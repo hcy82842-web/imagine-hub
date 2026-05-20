@@ -32,7 +32,7 @@ def list_history():
             ))
         return items
 
-@router.delete("/{history_id}", status_code=204)
+@router.delete("/{history_id}")
 def delete_history(history_id: int):
     with Session(engine) as session:
         record = session.get(GenerationHistory, history_id)
@@ -43,3 +43,4 @@ def delete_history(history_id: int):
             img_path.unlink()
         session.delete(record)
         session.commit()
+    return {"ok": True}
